@@ -82,9 +82,57 @@ This project was developed by Istanbul Zaim University Computer Science students
 - **Arsim Ajvazi**: Backend Integration & Authentication
 - **Vladyslav Shaposhnikov**: Testing & Documentation
 
+### Contributing
+
+We welcome contributions to the Zaim University Campus Information System! To ensure a smooth collaboration experience, please follow these guidelines:
+
+#### Branching Strategy
+
+1. **Main Branch**: The `main` branch contains the stable production version of the application. Direct commits to this branch are not allowed.
+
+2. **Feature Branches**: For each new feature, bug fix, or improvement:
+   - Create a new branch from `main` with a descriptive name following the pattern:
+     - `feature/feature-name` for new features
+     - `bugfix/issue-description` for bug fixes
+     - `improvement/description` for improvements
+   - Example: `feature/course-calendar-integration` or `bugfix/login-validation`
+
+3. **One Change, One Branch**: Each change, regardless of size, should be isolated in its own branch.
+
+#### Issue Tracking
+
+1. **Create an Issue First**: Before starting work on any change:
+   - Open an issue in the repository describing the proposed change
+   - Include the purpose, implementation details, and expected outcomes
+   - Add relevant labels (enhancement, bug, documentation, etc.)
+
+2. **Discussion**: Use the issue comments to discuss the proposed changes with team members before implementation.
+
+3. **Implementation**: After reaching consensus in the issue discussion:
+   - Reference the issue number in your branch name when possible
+   - Example: `feature/42-course-calendar-integration` for issue #42
+
+#### Pull Request Process
+
+1. Once your changes are ready:
+   - Ensure tests pass locally
+   - Update documentation if necessary
+   - Submit a pull request from your feature branch to `main`
+   - Reference the issue number in the PR description
+
+2. Code Review:
+   - At least one team member must approve the PR before merging
+   - Address any feedback or requested changes
+
+By following these guidelines, we maintain a clean, organized codebase and ensure that all changes are properly discussed, documented, and reviewed.
+
 ### License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+This project is licensed under a strict Proprietary License that grants usage rights EXCLUSIVELY to the original contributors (Arsim Ajvazi and Vladyslav Shaposhnikov).
+
+**IMPORTANT NOTICE:** Istanbul Zaim University is EXPRESSLY PROHIBITED from using, copying, modifying, distributing, or creating derivative works from this software under any circumstances. This prohibition extends to all departments, faculties, staff, and affiliates of the university. This project was created solely for educational demonstration purposes as part of coursework and cannot be appropriated by the university for any official or unofficial use.
+
+This is not an open-source project. Any unauthorized use may be subject to legal action. See the `LICENSE` file for complete details.
 
 ### Acknowledgements
 
