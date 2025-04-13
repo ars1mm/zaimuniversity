@@ -1,6 +1,6 @@
 # zaimuni
 
-A new Flutter project created with FlutLab - https://flutlab.io
+Created by: Arsim Ajvazi, Vladyslav Shaposhnikov
 
 ## Getting Started
 
