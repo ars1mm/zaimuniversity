@@ -49,7 +49,6 @@ If you encounter any issues, consider the following steps:
 - Ensure you have the latest version of Flutter installed
 - Check the project's dependencies in `pubspec.yaml` and update them if necessary
 - Review the error logs for specific details and search for solutions in the [Flutter Documentation](https://flutter.dev/docs)
-- For university-specific login issues, contact the IT department at [it@izu.edu.tr](mailto:it@izu.edu.tr)
 
 For further assistance, feel free to open an issue in the repository.
 
