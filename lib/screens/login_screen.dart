@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../constants/app_constants.dart';
+import 'admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -44,10 +45,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!context.mounted) return;
 
         if (userRole == AppConstants.roleAdmin) {
-          // Navigate to admin dashboard or home screen with admin options
+          // Navigate to admin dashboard
           _showRoleBasedSnackBar('Logged in as Administrator', Colors.green);
-          // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => AdminDashboard()));
-          // For now, just navigate to home screen or any available screen
+          Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const AdminDashboard()));
         } else {
           // Navigate to student/regular user dashboard
           _showRoleBasedSnackBar('Login successful', Colors.green);
@@ -101,6 +102,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     'https://www.izu.edu.tr/images/default-source/logo-galeri/1.jpg?sfvrsn=18698650_2',
                     height: 100,
                     fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Column(
+                        children: [
+                          Icon(Icons.school, size: 80, color: Colors.blue),
+                          Text('Campus Information System',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 

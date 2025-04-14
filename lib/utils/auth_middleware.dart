@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/logger_service.dart';
 
 class AuthMiddleware {
   static final AuthService _authService = AuthService();
+  static const String _tag = 'AuthMiddleware';
 
   /// Checks if the current user has admin access
   /// Returns true if the user is logged in and has admin role
   static Future<bool> isAdmin(BuildContext context) async {
-    final hasAccess = await _authService.hasAdminAccess();
+    LoggerService.debug(_tag, 'Checking admin access');
+    final hasAccess = await _authService.isAdmin(); // Using the correct method
 
     // Only proceed with context operations if access is denied and context is still mounted
     if (!hasAccess) {
+      LoggerService.warning(_tag, 'Unauthorized admin access attempt');
       if (context.mounted) {
         // Show unauthorized access message
         ScaffoldMessenger.of(context).showSnackBar(
