@@ -38,8 +38,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         if (!context.mounted) return;
-        // Navigate to home screen
-        // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
+
+        // Check user role and navigate accordingly
+        final userRole = await _authService.getUserRole();
+        if (!context.mounted) return;
+
+        if (userRole == AppConstants.roleAdmin) {
+          // Navigate to admin dashboard or home screen with admin options
+          _showRoleBasedSnackBar('Logged in as Administrator', Colors.green);
+          // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => AdminDashboard()));
+          // For now, just navigate to home screen or any available screen
+        } else {
+          // Navigate to student/regular user dashboard
+          _showRoleBasedSnackBar('Login successful', Colors.green);
+          // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
+        }
       } else {
         if (!context.mounted) return;
         _showErrorSnackBar('Invalid email or password');
@@ -56,6 +69,15 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showRoleBasedSnackBar(String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
       ),
     );
   }

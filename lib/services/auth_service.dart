@@ -65,4 +65,25 @@ class AuthService {
       return null;
     }
   }
+
+  Future<String?> getUserRole() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(AppConstants.userRoleKey);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> isAdmin() async {
+    final role = await getUserRole();
+    return role == AppConstants.roleAdmin;
+  }
+
+  Future<bool> hasAdminAccess() async {
+    if (!await isLoggedIn()) {
+      return false;
+    }
+    return await isAdmin();
+  }
 }

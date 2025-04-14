@@ -8,6 +8,7 @@ class AppConstants {
   static const String loginEndpoint = '$baseUrl/auth/login';
   static const String coursesEndpoint = '$baseUrl/courses';
   static const String newsEndpoint = '$baseUrl/news';
+  static const String addStudentEndpoint = '$baseUrl/students';
 
   // UI Constants
   static const double defaultPadding = 16.0;
@@ -17,6 +18,12 @@ class AppConstants {
   static const String tokenKey = 'auth_token';
   static const String userIdKey = 'user_id';
   static const String userRoleKey = 'user_role';
+
+  // User Roles
+  static const String roleAdmin = 'admin';
+  static const String roleStudent = 'student';
+  static const String roleFaculty = 'faculty';
+  static const String roleStaff = 'staff';
 
   // Asset Paths
   static const String logoPath = 'assets/images/logo.png';
