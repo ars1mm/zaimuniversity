@@ -8,24 +8,64 @@ class SupabaseService {
   // Get the Supabase client from the main.dart file
   final SupabaseClient supabase = Supabase.instance.client;
   final GoTrueClient _auth = Supabase.instance.client.auth;
-  static const String _tag = 'SupabaseService';
-
-  // Authentication methods
+  static const String _tag = 'SupabaseService'; // Authentication methods
   Future<AuthResponse> signUp(
       {required String email, required String password}) async {
     LoggerService.info(_tag, 'Creating new user account for: $email');
     try {
-      final result = await _auth.signUp(email: email, password: password);
+      // Clean email and ensure it's in proper format
+      final cleanEmail = email.trim().toLowerCase();
+
+      // Force email to be valid for Supabase by ensuring it has proper format
+      // We'll use the original email in the users table, but a valid one for auth
+      String authEmail;
+      if (!_isValidEmail(cleanEmail)) {
+        // Create a valid email for auth purposes while preserving the original in metadata
+        // This approach allows storing the user's intended email while satisfying Supabase
+        String sanitizedPart =
+            cleanEmail.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+        if (sanitizedPart.isEmpty) sanitizedPart = 'user';
+        authEmail = '$sanitizedPart@zaim.edu.tr';
+        LoggerService.warning(_tag,
+            'Using fallback email for auth: $authEmail (original: $cleanEmail)');
+      } else {
+        authEmail = cleanEmail;
+      }
+
+      // Proceed with sign up using potentially modified email
+      final result = await _auth.signUp(
+        email: authEmail,
+        password: password,
+        data: {
+          'original_email': cleanEmail
+        }, // Store original email in metadata
+      );
+
       if (result.user != null) {
         LoggerService.info(
-            _tag, 'Successfully created auth account for: $email');
+            _tag, 'Successfully created auth account for: $authEmail');
       } else {
         LoggerService.warning(
-            _tag, 'Auth account creation returned null user for: $email');
+            _tag, 'Auth account creation returned null user for: $authEmail');
       }
       return result;
     } catch (e) {
-      LoggerService.error(_tag, 'Failed to create auth account for: $email', e);
+      if (e is AuthException) {
+        LoggerService.error(
+            _tag, 'Auth error creating account for: $email - ${e.message}', e);
+
+        // Special handling for common email issues
+        if (e == 'email_address_invalid') {
+          LoggerService.warning(
+              _tag, 'Email address rejected by Supabase: $email');
+          // Rethrow to let the calling code handle it appropriately
+        } else if (e.toString() == 'user_already_exists') {
+          LoggerService.warning(_tag, 'User already exists with email: $email');
+        }
+      } else {
+        LoggerService.error(
+            _tag, 'Failed to create auth account for: $email', e);
+      }
       rethrow; // Let the calling code handle the error
     }
   }
@@ -79,12 +119,14 @@ class SupabaseService {
     required String email,
     required String fullName,
     required String role,
+    required String userId, // Add userId parameter to ensure we use the auth ID
     String status = 'active',
   }) async {
     LoggerService.info(
         _tag, 'Creating user record for: $email with role: $role');
     try {
       final Map<String, dynamic> userData = {
+        'id': userId, // Explicitly set the ID to match the auth user ID
         'email': email,
         'full_name': fullName,
         'role': role,
@@ -128,7 +170,33 @@ class SupabaseService {
   }) async {
     LoggerService.info(_tag, 'Creating student record for: $name ($studentId)');
     try {
-      // Create student record linked to user
+      // First, verify that the user record exists in the users table
+      final userExists = await _verifyUserExists(userId);
+      if (!userExists) {
+        LoggerService.warning(_tag,
+            'User ID $userId does not exist in users table. Creating it now.');
+
+        // Create the user record if it doesn't exist
+        final userData = {
+          'id': userId,
+          'email': email,
+          'full_name': name,
+          'role': 'student',
+          'status': 'active',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+
+        await supabase.from(AppConstants.tableUsers).insert(userData);
+
+        // Verify again to make sure it was created
+        final verifiedAgain = await _verifyUserExists(userId);
+        if (!verifiedAgain) {
+          throw Exception('Failed to create user record in users table');
+        }
+      }
+
+      // Now create the student record
       final Map<String, dynamic> studentData = {
         'id': userId, // This links to the users table
         'student_id': studentId,
@@ -172,7 +240,28 @@ class SupabaseService {
           .from(AppConstants.tableStudents)
           .select(
               '*, ${AppConstants.tableUsers}(full_name, email, role, status)')
-          .order('student_id');
+          .order('student_id',
+              ascending: false); // Changed to explicit ordering parameter
+
+      // If no students were found, try a different query to diagnose the issue
+      if (response.isEmpty) {
+        LoggerService.warning(_tag,
+            'No students found with the primary query. Trying a direct query to check if students exist.');
+
+        // Try a simple query to check if students table has any records at all
+        final directQuery = await supabase
+            .from(AppConstants.tableStudents)
+            .select('id, student_id')
+            .limit(5);
+
+        if (directQuery.isNotEmpty) {
+          LoggerService.warning(_tag,
+              'Found ${directQuery.length} student records with direct query, but join failed. Possible join configuration issue.');
+        } else {
+          LoggerService.warning(_tag,
+              'No student records found even with direct query. Students table might be empty.');
+        }
+      }
 
       LoggerService.info(_tag, 'Retrieved ${response.length} student records');
       return {
@@ -290,6 +379,29 @@ class SupabaseService {
     } catch (e) {
       LoggerService.error(
           _tag, 'Error checking student status for user: ${user.email}', e);
+      return false;
+    }
+  }
+
+  // Helper function to check if an email follows Supabase's requirements
+  bool _isValidEmail(String email) {
+    // Basic email validation for Supabase compatibility
+    final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return regex.hasMatch(email) && email.length <= 255;
+  }
+
+  // Helper method to verify if a user with the given ID exists in the users table
+  Future<bool> _verifyUserExists(String userId) async {
+    try {
+      final response = await supabase
+          .from(AppConstants.tableUsers)
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      LoggerService.error(_tag, 'Error verifying user existence: $userId', e);
       return false;
     }
   }

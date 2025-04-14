@@ -1,19 +1,21 @@
 import '../constants/app_constants.dart';
 import '../main.dart';
-import 'auth_service.dart';
+import 'base_service.dart';
+import 'role_service.dart';
 import 'logger_service.dart';
 
-class CourseService {
-  final AuthService _authService = AuthService();
-  static const String _tag = 'CourseService';
+/// CourseServiceImpl handles course-related database operations
+class CourseServiceImpl extends BaseService {
+  static const String _tag = 'CourseServiceImpl';
+  final RoleService _roleService = RoleService();
 
-  /// Get all courses from the database
+  /// Retrieves all courses from the database
   Future<Map<String, dynamic>> getAllCourses() async {
     LoggerService.info(_tag, 'Fetching all courses');
 
     try {
       // Check if user has admin access
-      final isAdmin = await _authService.isAdmin();
+      final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
         LoggerService.warning(
             _tag, 'Unauthorized attempt to fetch all courses');
@@ -27,8 +29,7 @@ class CourseService {
       final response = await supabase
           .from(AppConstants.tableCourses)
           .select('*, ${AppConstants.tableDepartments}(name)')
-          .order(
-              'title'); // Using 'title' field as defined in the database schema
+          .order('title');
 
       LoggerService.info(
           _tag, 'Retrieved ${response.length} courses from database');
@@ -47,7 +48,7 @@ class CourseService {
     }
   }
 
-  /// Add a new course
+  /// Adds a new course to the database
   Future<Map<String, dynamic>> addCourse({
     required String title,
     required int capacity,
@@ -62,7 +63,7 @@ class CourseService {
 
     try {
       // Check if user has admin access
-      final isAdmin = await _authService.isAdmin();
+      final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
         LoggerService.warning(_tag, 'Unauthorized attempt to add course');
         return {
@@ -93,7 +94,9 @@ class CourseService {
         departmentId = newDept['id'];
       } else {
         departmentId = departmentResponse['id'];
-      } // Create course
+      }
+
+      // Create course
       final courseData = {
         'title': title,
         'department_id': departmentId,
@@ -114,7 +117,7 @@ class CourseService {
           .select()
           .single();
 
-      LoggerService.info(_tag, 'Course added successfully: ${response['id']}');
+      LoggerService.info(_tag, 'Course added successfully: $title');
 
       return {
         'success': true,
@@ -130,7 +133,7 @@ class CourseService {
     }
   }
 
-  /// Update an existing course
+  /// Updates an existing course
   Future<Map<String, dynamic>> updateCourse({
     required String id,
     required String title,
@@ -146,7 +149,7 @@ class CourseService {
 
     try {
       // Check if user has admin access
-      final isAdmin = await _authService.isAdmin();
+      final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
         LoggerService.warning(_tag, 'Unauthorized attempt to update course');
         return {
@@ -177,29 +180,34 @@ class CourseService {
         departmentId = newDept['id'];
       } else {
         departmentId = departmentResponse['id'];
-      } // Update course
+      }
+
+      // Update course
       final courseData = {
         'title': title,
-        'capacity': capacity,
         'department_id': departmentId,
-        'instructor_id': instructorId,
         'description': description ?? '',
+        'capacity': capacity,
+        'instructor_id': instructorId,
+        'schedule': schedule ?? {},
         'semester': semester ?? '',
         'status': status,
-        'schedule': schedule,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      await supabase
+      final response = await supabase
           .from(AppConstants.tableCourses)
           .update(courseData)
-          .eq('id', id);
+          .eq('id', id)
+          .select()
+          .single();
 
-      LoggerService.info(_tag, 'Course updated successfully: $id ($title)');
+      LoggerService.info(_tag, 'Course updated successfully: $title');
 
       return {
         'success': true,
         'message': 'Course updated successfully',
+        'data': response,
       };
     } catch (e) {
       LoggerService.error(_tag, 'Error updating course', e);
@@ -210,13 +218,13 @@ class CourseService {
     }
   }
 
-  /// Delete a course
-  Future<Map<String, dynamic>> deleteCourse(String id) async {
-    LoggerService.info(_tag, 'Deleting course ID: $id');
+  /// Deletes a course by its ID
+  Future<Map<String, dynamic>> deleteCourse(String courseId) async {
+    LoggerService.info(_tag, 'Deleting course with ID: $courseId');
 
     try {
       // Check if user has admin access
-      final isAdmin = await _authService.isAdmin();
+      final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
         LoggerService.warning(_tag, 'Unauthorized attempt to delete course');
         return {
@@ -225,10 +233,12 @@ class CourseService {
         };
       }
 
-      // Delete course
-      await supabase.from(AppConstants.tableCourses).delete().eq('id', id);
+      await supabase
+          .from(AppConstants.tableCourses)
+          .delete()
+          .eq('id', courseId);
 
-      LoggerService.info(_tag, 'Course deleted successfully: $id');
+      LoggerService.info(_tag, 'Course deleted successfully');
 
       return {
         'success': true,
@@ -239,6 +249,32 @@ class CourseService {
       return {
         'success': false,
         'message': 'Failed to delete course: ${e.toString()}',
+      };
+    }
+  }
+
+  /// Gets course by ID
+  Future<Map<String, dynamic>> getCourseById(String courseId) async {
+    LoggerService.info(_tag, 'Fetching course with ID: $courseId');
+
+    try {
+      final response = await supabase
+          .from(AppConstants.tableCourses)
+          .select('*, ${AppConstants.tableDepartments}(name)')
+          .eq('id', courseId)
+          .single();
+
+      return {
+        'success': true,
+        'message': 'Course retrieved successfully',
+        'data': response,
+      };
+    } catch (e) {
+      LoggerService.error(
+          _tag, 'Error retrieving course with ID: $courseId', e);
+      return {
+        'success': false,
+        'message': 'Failed to retrieve course: ${e.toString()}',
       };
     }
   }

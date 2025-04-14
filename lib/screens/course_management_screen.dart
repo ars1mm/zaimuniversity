@@ -57,12 +57,13 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
 
           return {
             'id': course['id'] ?? '',
-            'name': course['name'] ?? '',
-            'code': course['code'] ?? '',
-            'credits': course['credits'] ?? 0,
+            'title': course['title'] ?? '',
+            'capacity': course['capacity'] ?? 0,
+            'semester': course['semester'] ?? '',
+            'status': course['status'] ?? 'active',
             'department': departmentName,
             'description': course['description'] ?? '',
-            'active': course['active'] ?? true,
+            'instructor_id': course['instructor_id'],
           };
         }).toList();
 
@@ -101,9 +102,9 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
 
     final query = _searchQuery.toLowerCase();
     return _courses.where((course) {
-      return course['name'].toString().toLowerCase().contains(query) ||
-          course['code'].toString().toLowerCase().contains(query) ||
-          course['department'].toString().toLowerCase().contains(query);
+      return course['title'].toString().toLowerCase().contains(query) ||
+          course['department'].toString().toLowerCase().contains(query) ||
+          course['semester'].toString().toLowerCase().contains(query);
     }).toList();
   }
 
@@ -141,12 +142,12 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 TextFormField(
                   controller: _courseNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Course Name',
+                    labelText: 'Course Title',
                     hintText: 'e.g. Introduction to Computer Science',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a course name';
+                      return 'Please enter a course title';
                     }
                     return null;
                   },
@@ -155,13 +156,13 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 TextFormField(
                   controller: _creditController,
                   decoration: const InputDecoration(
-                    labelText: 'Credits',
-                    hintText: 'e.g. 3',
+                    labelText: 'Capacity',
+                    hintText: 'e.g. 30',
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter credits';
+                      return 'Please enter capacity';
                     }
                     if (int.tryParse(value) == null) {
                       return 'Please enter a valid number';
@@ -208,12 +209,12 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 setState(() => _isLoading = true);
 
                 final result = await _courseService.addCourse(
-                  name: _courseNameController.text,
-                  code: _courseCodeController.text,
-                  credits: int.parse(_creditController.text),
+                  title: _courseNameController.text,
+                  capacity: int.parse(_creditController.text),
                   department: _departmentController.text,
                   description: _descriptionController.text,
-                  active: true,
+                  semester: _courseCodeController
+                      .text, // Using code field as semester temporarily
                 );
 
                 setState(() => _isLoading = false);
@@ -247,12 +248,11 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
 
   void _showEditCourseDialog(int index) {
     final course = _filteredCourses[index];
-    _courseNameController.text = course['name'];
-    _courseCodeController.text = course['code'];
-    _creditController.text = course['credits'].toString();
+    _courseNameController.text = course['title'];
+    _courseCodeController.text = course['semester'] ?? '';
+    _creditController.text = course['capacity'].toString();
     _departmentController.text = course['department'];
     _descriptionController.text = course['description'] ?? '';
-    bool isActive = course['active'] ?? true;
 
     showDialog(
       context: context,
@@ -267,12 +267,10 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 TextFormField(
                   controller: _courseCodeController,
                   decoration: const InputDecoration(
-                    labelText: 'Course Code',
+                    labelText: 'Semester',
+                    hintText: 'e.g. Fall 2025',
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a course code';
-                    }
                     return null;
                   },
                 ),
@@ -280,11 +278,11 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 TextFormField(
                   controller: _courseNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Course Name',
+                    labelText: 'Course Title',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a course name';
+                      return 'Please enter a course title';
                     }
                     return null;
                   },
@@ -293,12 +291,12 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 TextFormField(
                   controller: _creditController,
                   decoration: const InputDecoration(
-                    labelText: 'Credits',
+                    labelText: 'Capacity',
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter credits';
+                      return 'Please enter capacity';
                     }
                     if (int.tryParse(value) == null) {
                       return 'Please enter a valid number';
@@ -327,16 +325,6 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   ),
                   maxLines: 3,
                 ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  title: const Text('Active'),
-                  value: isActive,
-                  onChanged: (value) {
-                    setState(() {
-                      isActive = value;
-                    });
-                  },
-                ),
               ],
             ),
           ),
@@ -354,12 +342,12 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
 
                 final result = await _courseService.updateCourse(
                   id: course['id'],
-                  name: _courseNameController.text,
-                  code: _courseCodeController.text,
-                  credits: int.parse(_creditController.text),
+                  title: _courseNameController.text,
+                  capacity: int.parse(_creditController.text),
                   department: _departmentController.text,
                   description: _descriptionController.text,
-                  active: isActive,
+                  semester: _courseCodeController.text,
+                  status: course['status'] ?? 'active',
                 );
 
                 setState(() => _isLoading = false);
@@ -533,17 +521,6 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: course['active']
-                                            ? Colors.green
-                                            : Colors.red,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
                                     IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () =>

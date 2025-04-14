@@ -31,30 +31,39 @@ class StudentService {
         'success': false,
         'message': 'Unauthorized: Admin privileges required',
       };
+    } // We're allowing any email format, but still log if it doesn't match a standard pattern
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      LoggerService.warning(_tag,
+          'Non-standard email format detected: $email (continuing anyway)');
     }
 
     try {
+      // Clean the email (trim whitespace and convert to lowercase)
+      final cleanEmail = email.trim().toLowerCase();
+
       // Step 1: Create a user account in Auth
-      LoggerService.debug(_tag, 'Step 1: Creating auth account for: $email');
+      LoggerService.debug(
+          _tag, 'Step 1: Creating auth account for: $cleanEmail');
       final signUpResult = await _supabaseService.signUp(
-        email: email,
+        email: cleanEmail,
         password: password ?? generateDefaultPassword(studentId),
       );
 
       if (signUpResult.user == null) {
-        LoggerService.error(_tag, 'Failed to create auth account for: $email');
+        LoggerService.error(
+            _tag, 'Failed to create auth account for: $cleanEmail');
         return {
           'success': false,
           'message': 'Failed to create auth account',
         };
-      }
-
-      // Step 2: Create a record in the users table
+      } // Step 2: Create a record in the users table
       final userId = signUpResult.user!.id;
       LoggerService.debug(
           _tag, 'Step 2: Creating user record with ID: $userId');
       final createUserResult = await _supabaseService.createUser(
-        email: email,
+        userId: userId, // Pass the auth user ID to ensure consistency
+        email: cleanEmail,
         fullName: name,
         role: AppConstants.roleStudent,
       );
@@ -101,7 +110,7 @@ class StudentService {
           _tag, 'Step 4: Adding student details for user ID: $userId');
       final addStudentResult = await _supabaseService.addStudent(
         name: name,
-        email: email,
+        email: cleanEmail,
         studentId: studentId,
         departmentId: departmentId,
         userId: userId,
