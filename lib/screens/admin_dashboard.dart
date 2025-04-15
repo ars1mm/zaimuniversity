@@ -119,6 +119,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Navigator.pushNamed(context, '/add_student');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: const Text('Assign Supervisor'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/assign_supervisor');
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: const Text('Manage Teachers'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/manage_teachers');
+              },
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.settings),
