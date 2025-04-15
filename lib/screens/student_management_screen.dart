@@ -682,7 +682,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                           .from(AppConstants.tableStudents)
                           .update({
                             'student_id': _studentIdController.text.trim(),
-                            'department_id': int.parse(_departmentController.text),
+                            'department_id': _departmentController.text.trim(),
                             'address': _addressController.text.trim(),
                             'contact_info': {
                               'phone': _phoneController.text.trim(),
