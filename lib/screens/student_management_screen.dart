@@ -60,10 +60,17 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
       final response = await supabase
           .from(AppConstants.tableUsers)
           .select('''
-            *,
-            students (
-              *,
-              departments (
+            id,
+            full_name,
+            email,
+            status,
+            students!inner (
+              student_id,
+              department_id,
+              address,
+              contact_info,
+              academic_standing,
+              departments!inner (
                 name
               )
             )
@@ -83,18 +90,35 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
             _logger.finer('Processing student: ${student['full_name']}');
             final studentData = student['students'] as Map<String, dynamic>?;
             _logger.finer('Student data: ${studentData?.toString()}');
+            
+            // Ensure all required fields are present
             return {
               'id': student['id'],
-              'full_name': student['full_name'],
-              'email': student['email'],
-              'status': student['status'],
-              'students': studentData,
+              'full_name': student['full_name'] ?? 'Unknown Student',
+              'email': student['email'] ?? '',
+              'status': student['status'] ?? 'active',
+              'students': {
+                'student_id': studentData?['student_id'] ?? '',
+                'department_id': studentData?['department_id'] ?? '',
+                'address': studentData?['address'] ?? '',
+                'contact_info': studentData?['contact_info'] ?? {},
+                'academic_standing': studentData?['academic_standing'] ?? 'good',
+                'departments': {
+                  'name': studentData?['departments']?['name'] ?? 'Unknown Department'
+                }
+              },
             };
           }).toList();
           _logger.info('Successfully loaded ${_students.length} students');
         });
       } else {
         _logger.warning('Received null response from Supabase');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No students found'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e, stackTrace) {
       _logger.severe('Error loading students', e, stackTrace);
@@ -104,11 +128,11 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   Future<void> _loadDepartments() async {
@@ -762,73 +786,130 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                             
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
-                              child: ListTile(
-                                title: Text(
-                                  student['full_name'] ?? 'Unknown Student',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Column(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(student['email'] ?? ''),
-                                    if (studentData != null) ...[
-                                      Text('Student ID: ${studentData['student_id'] ?? 'Not assigned'}'),
-                                      Text('Address: ${studentData['address'] ?? 'Not provided'}'),
-                                      if (contactInfo != null) ...[
-                                        Text('Phone: ${contactInfo['phone'] ?? 'Not provided'}'),
-                                      ],
-                                      if (departmentData != null) ...[
-                                        Text(
-                                          'Department: ${departmentData['name'] ?? 'Not assigned'}',
-                                          style: const TextStyle(
-                                            fontStyle: FontStyle.italic,
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                student['full_name'] ?? 'Unknown Student',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                student['email'] ?? '',
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                      Text(
-                                        'Academic Standing: ${studentData['academic_standing'] ?? 'Unknown'}',
-                                        style: TextStyle(
-                                          color: studentData['academic_standing'] == 'good'
-                                              ? Colors.green
-                                              : studentData['academic_standing'] == 'warning'
-                                                  ? Colors.orange
-                                                  : Colors.red,
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit),
+                                              onPressed: () {
+                                                _logger.info('Edit button pressed for student: ${student['full_name']}');
+                                                _showEditStudentDialog(index);
+                                              },
+                                              color: Colors.blue,
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete),
+                                              onPressed: () {
+                                                _logger.info('Delete button pressed for student: ${student['full_name']}');
+                                                _confirmDeleteStudent(index);
+                                              },
+                                              color: Colors.red,
+                                            ),
+                                          ],
                                         ),
+                                      ],
+                                    ),
+                                    const Divider(),
+                                    if (studentData != null) ...[
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                _buildInfoRow(
+                                                  'Student ID',
+                                                  studentData['student_id'] ?? 'Not assigned',
+                                                  Icons.badge,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                if (departmentData != null)
+                                                  _buildInfoRow(
+                                                    'Department',
+                                                    departmentData['name'] ?? 'Not assigned',
+                                                    Icons.business,
+                                                  ),
+                                                const SizedBox(height: 8),
+                                                _buildInfoRow(
+                                                  'Address',
+                                                  studentData['address'] ?? 'Not provided',
+                                                  Icons.location_on,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                if (contactInfo != null)
+                                                  _buildInfoRow(
+                                                    'Phone',
+                                                    contactInfo['phone'] ?? 'Not provided',
+                                                    Icons.phone,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                _buildStatusChip(
+                                                  'Status',
+                                                  student['status'] ?? 'Unknown',
+                                                  student['status'] == 'active'
+                                                      ? Colors.green
+                                                      : student['status'] == 'inactive'
+                                                          ? Colors.grey
+                                                          : Colors.red,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                _buildStatusChip(
+                                                  'Academic Standing',
+                                                  studentData['academic_standing'] ?? 'Unknown',
+                                                  studentData['academic_standing'] == 'good'
+                                                      ? Colors.green
+                                                      : studentData['academic_standing'] == 'warning'
+                                                          ? Colors.orange
+                                                          : Colors.red,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                _buildInfoRow(
+                                                  'Enrollment Date',
+                                                  _formatDate(studentData['enrollment_date']),
+                                                  Icons.calendar_today,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
-                                    Text(
-                                      'Status: ${student['status'] ?? 'Unknown'}',
-                                      style: TextStyle(
-                                        color: student['status'] == 'active'
-                                            ? Colors.green
-                                            : student['status'] == 'inactive'
-                                                ? Colors.grey
-                                                : Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () {
-                                        _logger.info('Edit button pressed for student: ${student['full_name']}');
-                                        _showEditStudentDialog(index);
-                                      },
-                                      color: Colors.blue,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () {
-                                        _logger.info('Delete button pressed for student: ${student['full_name']}');
-                                        _confirmDeleteStudent(index);
-                                      },
-                                      color: Colors.red,
-                                    ),
                                   ],
                                 ),
                               ),
@@ -847,5 +928,77 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Widget _buildInfoRow(String label, String value, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusChip(String label, String status, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color),
+          ),
+          child: Text(
+            status,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'Not available';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return 'Invalid date';
+    }
   }
 }

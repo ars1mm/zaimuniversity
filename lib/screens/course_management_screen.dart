@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../services/course_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CourseManagementScreen extends StatefulWidget {
   const CourseManagementScreen({super.key});
@@ -11,7 +12,9 @@ class CourseManagementScreen extends StatefulWidget {
 
 class _CourseManagementScreenState extends State<CourseManagementScreen> {
   final CourseService _courseService = CourseService();
+  final SupabaseClient _supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _courses = [];
+  List<Map<String, dynamic>> _departments = [];
   bool _isLoading = true;
   String _searchQuery = '';
   final _formKey = GlobalKey<FormState>();
@@ -20,11 +23,14 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
   final _creditController = TextEditingController();
   final _departmentController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _searchCodeController = TextEditingController();
+  String _selectedDepartmentId = '';
 
   @override
   void initState() {
     super.initState();
     _loadCourses();
+    _loadDepartments();
   }
 
   @override
@@ -34,6 +40,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     _creditController.dispose();
     _departmentController.dispose();
     _descriptionController.dispose();
+    _searchCodeController.dispose();
     super.dispose();
   }
 
@@ -100,6 +107,33 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     }
   }
 
+  Future<void> _loadDepartments() async {
+    try {
+      final response = await _supabase
+          .from(AppConstants.tableDepartments)
+          .select()
+          .order('name');
+
+      if (response != null) {
+        setState(() {
+          _departments = (response as List<dynamic>).map((dept) {
+            return {
+              'id': dept['id'].toString(),
+              'name': dept['name']?.toString() ?? 'Unknown Department'
+            };
+          }).toList();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading departments: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   List<Map<String, dynamic>> get _filteredCourses {
     if (_searchQuery.isEmpty) {
       return _courses;
@@ -119,6 +153,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     _creditController.clear();
     _departmentController.clear();
     _descriptionController.clear();
+    _selectedDepartmentId = '';
 
     await showDialog(
       context: context,
@@ -176,15 +211,26 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _departmentController,
+                DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Department',
-                    hintText: 'e.g. Computer Science',
                   ),
+                  items: _departments.map((department) {
+                    return DropdownMenuItem<String>(
+                      value: department['id'].toString(),
+                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedDepartmentId = value ?? '';
+                      _departmentController.text = _departments
+                          .firstWhere((dept) => dept['id'] == value)['name'];
+                    });
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a department';
+                      return 'Please select a department';
                     }
                     return null;
                   },
@@ -218,8 +264,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   capacity: int.parse(_creditController.text),
                   department: _departmentController.text,
                   description: _descriptionController.text,
-                  semester: _courseCodeController
-                      .text, // Using code field as semester temporarily
+                  semester: _courseCodeController.text,
                 );
 
                 setState(() => _isLoading = false);
@@ -236,8 +281,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content:
-                          Text('Failed to add course: ${result['message']}'),
+                      content: Text('Failed to add course: ${result['message']}'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -253,11 +297,26 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
 
   void _showEditCourseDialog(int index) {
     final course = _filteredCourses[index];
-    _courseNameController.text = course['title'];
+    
+    // Properly initialize all controllers with existing data
+    _courseNameController.text = course['title'] ?? '';
     _courseCodeController.text = course['semester'] ?? '';
-    _creditController.text = course['capacity'].toString();
-    _departmentController.text = course['department'];
+    _creditController.text = (course['capacity'] ?? '0').toString();
     _descriptionController.text = course['description'] ?? '';
+    
+    // Find the correct department ID
+    _selectedDepartmentId = _departments
+        .firstWhere(
+          (dept) => dept['name'] == course['department'],
+          orElse: () => {'id': '', 'name': ''},
+        )['id']
+        .toString();
+    
+    // Set the department controller text
+    _departmentController.text = course['department'] ?? '';
+    
+    // Initialize status
+    String selectedStatus = course['status'] ?? 'active';
 
     showDialog(
       context: context,
@@ -274,16 +333,21 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Semester',
                     hintText: 'e.g. Fall 2025',
+                    border: OutlineInputBorder(),
                   ),
                   validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a semester';
+                    }
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _courseNameController,
                   decoration: const InputDecoration(
                     labelText: 'Course Title',
+                    border: OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -292,11 +356,12 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _creditController,
                   decoration: const InputDecoration(
                     labelText: 'Capacity',
+                    border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
@@ -309,24 +374,79 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _departmentController,
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Department',
+                    border: OutlineInputBorder(),
                   ),
+                  value: _selectedDepartmentId.isNotEmpty ? _selectedDepartmentId : null,
+                  items: _departments.map((department) {
+                    return DropdownMenuItem<String>(
+                      value: department['id'].toString(),
+                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedDepartmentId = value ?? '';
+                      if (value != null) {
+                        final dept = _departments.firstWhere(
+                          (d) => d['id'].toString() == value,
+                          orElse: () => {'name': 'Unknown Department'},
+                        );
+                        _departmentController.text = dept['name'];
+                      }
+                    });
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a department';
+                      return 'Please select a department';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  value: selectedStatus,
+                  items: const [
+                    DropdownMenuItem<String>(
+                      value: 'active',
+                      child: Text('Active'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'pending',
+                      child: Text('Pending'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'rejected',
+                      child: Text('Rejected'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'completed',
+                      child: Text('Completed'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'cancelled',
+                      child: Text('Cancelled'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedStatus = value ?? 'active';
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _descriptionController,
                   decoration: const InputDecoration(
                     labelText: 'Description',
+                    border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
                 ),
@@ -349,17 +469,16 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   id: course['id'],
                   title: _courseNameController.text,
                   capacity: int.parse(_creditController.text),
-                  department: _departmentController.text,
+                  department: _selectedDepartmentId,
                   description: _descriptionController.text,
                   semester: _courseCodeController.text,
-                  status: course['status'] ?? 'active',
+                  status: selectedStatus,
                 );
 
                 setState(() => _isLoading = false);
 
                 if (result['success']) {
                   _loadCourses();
-
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Course updated successfully'),
@@ -369,8 +488,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content:
-                          Text('Failed to update course: ${result['message']}'),
+                      content: Text('Failed to update course: ${result['message']}'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -439,10 +557,74 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     );
   }
 
+  void _showSearchCourseDialog() {
+    _searchCodeController.clear();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Search Course'),
+        content: Form(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _searchCodeController,
+                decoration: const InputDecoration(
+                  labelText: 'Course Code',
+                  hintText: 'Enter course code to search',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final courseCode = _searchCodeController.text.trim();
+              if (courseCode.isNotEmpty) {
+                Navigator.of(context).pop();
+                _searchAndEditCourse(courseCode);
+              }
+            },
+            child: const Text('Search & Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _searchAndEditCourse(String courseCode) {
+    final courseIndex = _courses.indexWhere(
+      (course) => course['semester']?.toString().toLowerCase() == courseCode.toLowerCase(),
+    );
+
+    if (courseIndex != -1) {
+      _showEditCourseDialog(courseIndex);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No course found with code: $courseCode'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Course Management'),
         actions: [
           IconButton(
@@ -475,9 +657,23 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 ),
                 const SizedBox(width: 16),
                 FilledButton.icon(
+                  onPressed: _showSearchCourseDialog,
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit Course'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                FilledButton.icon(
                   onPressed: _showAddCourseDialog,
                   icon: const Icon(Icons.add),
                   label: const Text('Add Course'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -524,22 +720,11 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                                   ],
                                 ),
                                 isThreeLine: true,
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () =>
-                                          _showEditCourseDialog(index),
-                                      color: Colors.blue,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () =>
-                                          _confirmDeleteCourse(index),
-                                      color: Colors.red,
-                                    ),
-                                  ],
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => _confirmDeleteCourse(index),
+                                  color: Colors.red,
+                                  tooltip: 'Delete Course',
                                 ),
                               ),
                             );
@@ -552,6 +737,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCourseDialog,
         child: const Icon(Icons.add),
+        tooltip: 'Add Course',
       ),
     );
   }
