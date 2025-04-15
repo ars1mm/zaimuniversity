@@ -28,6 +28,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   List<Map<String, dynamic>> _departments = [];
   String _selectedStatus = 'active';
   String _selectedAcademicStanding = 'good';
+  DateTime _selectedEnrollmentDate = DateTime.now();
 
   @override
   void initState() {
@@ -61,17 +62,24 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           .from(AppConstants.tableUsers)
           .select('''
             id,
-            full_name,
             email,
+            full_name,
+            role,
             status,
+            created_at,
+            updated_at,
             students!inner (
               student_id,
               department_id,
               address,
               contact_info,
+              enrollment_date,
               academic_standing,
+              preferences,
               departments!inner (
-                name
+                id,
+                name,
+                description
               )
             )
           ''')
@@ -91,21 +99,23 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
             final studentData = student['students'] as Map<String, dynamic>?;
             _logger.finer('Student data: ${studentData?.toString()}');
             
-            // Ensure all required fields are present
             return {
               'id': student['id'],
-              'full_name': student['full_name'] ?? 'Unknown Student',
-              'email': student['email'] ?? '',
-              'status': student['status'] ?? 'active',
+              'email': student['email'],
+              'full_name': student['full_name'],
+              'role': student['role'],
+              'status': student['status'],
+              'created_at': student['created_at'],
+              'updated_at': student['updated_at'],
               'students': {
-                'student_id': studentData?['student_id'] ?? '',
-                'department_id': studentData?['department_id'] ?? '',
-                'address': studentData?['address'] ?? '',
+                'student_id': studentData?['student_id'],
+                'department_id': studentData?['department_id'],
+                'address': studentData?['address'],
                 'contact_info': studentData?['contact_info'] ?? {},
-                'academic_standing': studentData?['academic_standing'] ?? 'good',
-                'departments': {
-                  'name': studentData?['departments']?['name'] ?? 'Unknown Department'
-                }
+                'enrollment_date': studentData?['enrollment_date'],
+                'academic_standing': studentData?['academic_standing'],
+                'preferences': studentData?['preferences'] ?? {},
+                'departments': studentData?['departments'],
               },
             };
           }).toList();
@@ -122,16 +132,20 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
       }
     } catch (e, stackTrace) {
       _logger.severe('Error loading students', e, stackTrace);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading students: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading students: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -443,7 +457,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     );
   }
 
-  void _showEditStudentDialog(int index) {
+  Future<void> _showEditStudentDialog(int index) async {
     _logger.info('Showing edit dialog for student at index $index');
     final student = _filteredStudents[index];
     final studentData = student['students'] as Map<String, dynamic>?;
@@ -457,257 +471,339 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     _studentIdController.text = studentData?['student_id'] ?? '';
     _addressController.text = studentData?['address'] ?? '';
     _phoneController.text = contactInfo?['phone'] ?? '';
-    _departmentController.text = departmentData?['name'] ?? '';
+    _departmentController.text = departmentData?['id']?.toString() ?? '';
     _selectedStatus = student['status'] ?? 'active';
     _selectedAcademicStanding = studentData?['academic_standing'] ?? 'good';
+    _selectedEnrollmentDate = studentData?['enrollment_date'] != null 
+        ? DateTime.parse(studentData!['enrollment_date']).toLocal()
+        : DateTime.now();
 
-    showDialog(
+    if (!mounted) return;
+    
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Student'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _studentIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Student ID',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student ID';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Department',
-                  ),
-                  items: _departments.map((department) {
-                    return DropdownMenuItem<String>(
-                      value: department['id'].toString(),
-                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    _logger.fine('Selected department: $value');
-                    _departmentController.text = value ?? '';
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a department';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                  ),
-                  value: _selectedStatus,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'active',
-                      child: Text('Active'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit Student'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name *',
+                      hintText: 'Enter student\'s full name',
                     ),
-                    DropdownMenuItem(
-                      value: 'inactive',
-                      child: Text('Inactive'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'suspended',
-                      child: Text('Suspended'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    _logger.fine('Selected status: $value');
-                    if (value != null) {
-                      setState(() {
-                        _selectedStatus = value;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Academic Standing',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a name';
+                      }
+                      return null;
+                    },
                   ),
-                  value: _selectedAcademicStanding,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'good',
-                      child: Text('Good'),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email *',
+                      hintText: 'Enter student\'s email',
                     ),
-                    DropdownMenuItem(
-                      value: 'warning',
-                      child: Text('Warning'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an email';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _studentIdController,
+                    decoration: const InputDecoration(
+                      labelText: 'Student ID *',
+                      hintText: 'Enter unique student ID',
                     ),
-                    DropdownMenuItem(
-                      value: 'probation',
-                      child: Text('Probation'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a student ID';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Department *',
                     ),
-                  ],
-                  onChanged: (value) {
-                    _logger.fine('Selected academic standing: $value');
-                    if (value != null) {
-                      setState(() {
-                        _selectedAcademicStanding = value;
-                      });
-                    }
-                  },
-                ),
-              ],
+                    value: _departmentController.text.isNotEmpty ? _departmentController.text : null,
+                    items: _departments.map((department) {
+                      return DropdownMenuItem<String>(
+                        value: department['id'].toString(),
+                        child: Text(department['name']?.toString() ?? 'Unknown Department'),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      _logger.fine('Selected department: $value');
+                      _departmentController.text = value ?? '';
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a department';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _addressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Address',
+                      hintText: 'Enter student\'s address',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number',
+                      hintText: 'Enter student\'s phone number',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Status *',
+                    ),
+                    value: _selectedStatus,
+                    items: const [
+                      DropdownMenuItem(value: 'active', child: Text('Active')),
+                      DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+                      DropdownMenuItem(value: 'suspended', child: Text('Suspended')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedStatus = value);
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a status';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Academic Standing *',
+                    ),
+                    value: _selectedAcademicStanding,
+                    items: const [
+                      DropdownMenuItem(value: 'good', child: Text('Good')),
+                      DropdownMenuItem(value: 'warning', child: Text('Warning')),
+                      DropdownMenuItem(value: 'probation', child: Text('Probation')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedAcademicStanding = value);
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select academic standing';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    title: const Text('Enrollment Date'),
+                    subtitle: Text(_formatDate(_selectedEnrollmentDate.toIso8601String())),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedEnrollmentDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null && picked != _selectedEnrollmentDate) {
+                        setState(() {
+                          _selectedEnrollmentDate = picked;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _logger.info('Cancelled editing student');
-              Navigator.of(context).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                _logger.info('Form validated, proceeding with student update');
-                setState(() {
-                  final originalStudentIndex =
-                      _students.indexWhere((s) => s['id'] == student['id']);
-                  if (originalStudentIndex != -1) {
-                    _logger.fine('Updating student at index $originalStudentIndex');
-                    _students[originalStudentIndex] = {
-                      'id': student['id'],
-                      'full_name': _nameController.text,
-                      'email': _emailController.text,
-                      'status': _selectedStatus,
-                      'students': {
-                        'student_id': _studentIdController.text,
-                        'department_id': _departmentController.text,
-                        'address': _addressController.text,
-                        'contact_info': {
-                          'phone': _phoneController.text,
-                        },
-                        'academic_standing': _selectedAcademicStanding,
-                      },
-                    };
-                    _logger.info('Student updated successfully');
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  _logger.info('Form validated, proceeding with student update');
+                  Navigator.of(context).pop();
+                  if (!mounted) return;
+                  setState(() => _isLoading = true);
+
+                  try {
+                    _logger.fine('Starting database update transaction');
+                    
+                    // Update user data first
+                    _logger.fine('Updating user data');
+                    final userUpdateResponse = await supabase
+                        .from(AppConstants.tableUsers)
+                        .update({
+                          'email': _emailController.text.trim(),
+                          'full_name': _nameController.text.trim(),
+                          'status': _selectedStatus,
+                          'updated_at': DateTime.now().toIso8601String(),
+                        })
+                        .eq('id', student['id'])
+                        .select()
+                        .single();
+                    
+                    _logger.fine('User update response: $userUpdateResponse');
+
+                    if (userUpdateResponse != null) {
+                      // Update student data
+                      _logger.fine('Updating student data');
+                      final studentUpdateResponse = await supabase
+                          .from(AppConstants.tableStudents)
+                          .update({
+                            'student_id': _studentIdController.text.trim(),
+                            'department_id': int.parse(_departmentController.text),
+                            'address': _addressController.text.trim(),
+                            'contact_info': {
+                              'phone': _phoneController.text.trim(),
+                            },
+                            'enrollment_date': _selectedEnrollmentDate.toIso8601String(),
+                            'academic_standing': _selectedAcademicStanding,
+                          })
+                          .eq('id', student['id'])
+                          .select()
+                          .single();
+                      
+                      _logger.fine('Student update response: $studentUpdateResponse');
+
+                      _logger.info('Student updated successfully in database');
+                      await _loadStudents();
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Student updated successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e, stackTrace) {
+                    _logger.severe('Error updating student', e, stackTrace);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating student: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => _isLoading = false);
+                    }
                   }
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Student updated successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-
-                Navigator.of(context).pop();
-              } else {
-                _logger.warning('Form validation failed');
-              }
-            },
-            child: const Text('Save Changes'),
-          ),
-        ],
+                } else {
+                  _logger.warning('Form validation failed');
+                }
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _confirmDeleteStudent(int index) {
+  Future<void> _confirmDeleteStudent(int index) async {
     _logger.info('Showing delete confirmation for student at index $index');
     final student = _filteredStudents[index];
+    final studentData = student['students'] as Map<String, dynamic>?;
 
-    showDialog(
+    final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Student'),
         content: Text(
-          'Are you sure you want to delete "${student['full_name']}" (${student['students']['student_id']})? This action cannot be undone.',
+          'Are you sure you want to delete "${student['full_name']}" (${studentData?['student_id']})?\n\n'
+          'This will permanently delete all student data and cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              _logger.info('Cancelled student deletion');
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Colors.red),
-            ),
-            onPressed: () {
-              _logger.info('Deleting student');
-              setState(() {
-                _students.removeWhere((s) => s['id'] == student['id']);
-              });
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Student deleted successfully'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-
-              Navigator.of(context).pop();
-            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
+
+    if (confirm == true && mounted) {
+      setState(() => _isLoading = true);
+      try {
+        // Delete student record first (due to foreign key constraint)
+        await supabase
+            .from(AppConstants.tableStudents)
+            .delete()
+            .eq('id', student['id']);
+
+        // Then delete user record
+        await supabase
+            .from(AppConstants.tableUsers)
+            .delete()
+            .eq('id', student['id']);
+
+        _logger.info('Student deleted successfully from database');
+        await _loadStudents();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Student deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e, stackTrace) {
+        _logger.severe('Error deleting student', e, stackTrace);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting student: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
   }
 
   @override
@@ -798,18 +894,26 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                student['full_name'] ?? 'Unknown Student',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                ),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      student['full_name'] ?? 'Unknown Student',
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 18,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  _buildStatusChip(student['status'] ?? 'Unknown'),
+                                                ],
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
                                                 student['email'] ?? '',
                                                 style: const TextStyle(
                                                   color: Colors.grey,
+                                                  fontSize: 14,
                                                 ),
                                               ),
                                             ],
@@ -838,9 +942,10 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                         ),
                                       ],
                                     ),
-                                    const Divider(),
+                                    const Divider(height: 24),
                                     if (studentData != null) ...[
                                       Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Expanded(
                                             child: Column(
@@ -852,51 +957,38 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                                   Icons.badge,
                                                 ),
                                                 const SizedBox(height: 8),
-                                                if (departmentData != null)
-                                                  _buildInfoRow(
-                                                    'Department',
-                                                    departmentData['name'] ?? 'Not assigned',
-                                                    Icons.business,
-                                                  ),
+                                                _buildInfoRow(
+                                                  'Department',
+                                                  departmentData?['name'] ?? 'Not assigned',
+                                                  Icons.business,
+                                                ),
                                                 const SizedBox(height: 8),
                                                 _buildInfoRow(
                                                   'Address',
                                                   studentData['address'] ?? 'Not provided',
                                                   Icons.location_on,
                                                 ),
-                                                const SizedBox(height: 8),
-                                                if (contactInfo != null)
+                                                if (contactInfo != null) ...[
+                                                  const SizedBox(height: 8),
                                                   _buildInfoRow(
                                                     'Phone',
                                                     contactInfo['phone'] ?? 'Not provided',
                                                     Icons.phone,
                                                   ),
+                                                ],
                                               ],
                                             ),
                                           ),
-                                          const SizedBox(width: 16),
+                                          const SizedBox(width: 24),
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                _buildStatusChip(
-                                                  'Status',
-                                                  student['status'] ?? 'Unknown',
-                                                  student['status'] == 'active'
-                                                      ? Colors.green
-                                                      : student['status'] == 'inactive'
-                                                          ? Colors.grey
-                                                          : Colors.red,
-                                                ),
-                                                const SizedBox(height: 8),
-                                                _buildStatusChip(
+                                                _buildInfoRow(
                                                   'Academic Standing',
                                                   studentData['academic_standing'] ?? 'Unknown',
-                                                  studentData['academic_standing'] == 'good'
-                                                      ? Colors.green
-                                                      : studentData['academic_standing'] == 'warning'
-                                                          ? Colors.orange
-                                                          : Colors.red,
+                                                  Icons.school,
+                                                  color: _getAcademicStandingColor(studentData['academic_standing']),
                                                 ),
                                                 const SizedBox(height: 8),
                                                 _buildInfoRow(
@@ -904,6 +996,14 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                                   _formatDate(studentData['enrollment_date']),
                                                   Icons.calendar_today,
                                                 ),
+                                                if (studentData['preferences'] != null) ...[
+                                                  const SizedBox(height: 8),
+                                                  _buildInfoRow(
+                                                    'Preferences',
+                                                    _formatPreferences(studentData['preferences']),
+                                                    Icons.settings,
+                                                  ),
+                                                ],
                                               ],
                                             ),
                                           ),
@@ -930,11 +1030,11 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, IconData icon) {
+  Widget _buildInfoRow(String label, String value, IconData icon, {Color? color}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: Colors.grey),
+        Icon(icon, size: 16, color: color),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -960,45 +1060,66 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     );
   }
 
-  Widget _buildStatusChip(String label, String status, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
+  Widget _buildStatusChip(String status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _getStatusColor(status)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: _getStatusColor(status),
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'inactive':
+        return Colors.grey;
+      case 'suspended':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getAcademicStandingColor(String? standing) {
+    switch (standing?.toLowerCase()) {
+      case 'good':
+        return Colors.green;
+      case 'warning':
+        return Colors.orange;
+      case 'probation':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Not available';
     try {
       final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     } catch (e) {
+      _logger.warning('Error formatting date: $dateString', e);
       return 'Invalid date';
     }
+  }
+
+  String _formatPreferences(Map<String, dynamic> preferences) {
+    if (preferences.isEmpty) return 'No preferences set';
+    return preferences.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join(', ');
   }
 }
