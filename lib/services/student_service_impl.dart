@@ -86,104 +86,58 @@ class StudentServiceImpl extends BaseService {
   Future<Map<String, dynamic>> getAllStudents() async {
     LoggerService.info(_tag, 'Retrieving all students');
     try {
-      // Query the users table to find all users with student role
-      final usersResponse = await supabase
+      // Query the users table for users with student role and join with students and departments
+      final response = await supabase
           .from(AppConstants.tableUsers)
-          .select('id, full_name, email, role, status')
-          .eq('role', AppConstants.roleStudent);
-      LoggerService.info(
-          _tag, 'Found ${usersResponse.length} users with student role');
+          .select('''
+            *,
+            students (
+              *,
+              departments (
+                name
+              )
+            )
+          ''')
+          .eq('role', AppConstants.roleStudent)
+          .order('full_name');
 
-      // No students found in users table
-      if (usersResponse.isEmpty) {
-        LoggerService.info(
-            _tag, 'No users with student role found in users table.');
-        return {'success': true, 'message': 'No students found', 'data': []};
-      }
-
-      // Process the student user data
-      List<Map<String, dynamic>> studentRecords = [];
-
-      // Convert each user record into a student record format
-      for (var userRecord in usersResponse) {
-        // Create a combined student record from user data
-        Map<String, dynamic> studentRecord = {
-          'id': userRecord['id'],
-          'user': userRecord, // Include the full user record as a nested object
-          'student_id': 'N/A', // Default values for student-specific fields
-          'department_id': null,
-          'address': null,
-          'contact_info': {},
-          'enrollment_date': null,
-          'academic_standing': 'pending',
-          'preferences': {},
+      if (response.isEmpty) {
+        LoggerService.warning(_tag, 'No students found in the database');
+        return {
+          'success': true,
+          'message': 'No students found',
+          'data': [],
         };
-
-        // Add to our results
-        studentRecords.add(studentRecord);
       }
 
-      // Try to enhance records with data from students table (if it exists)
-      try {
-        // Get the list of user IDs with student role
-        final studentUserIds =
-            usersResponse.map((user) => user['id'].toString()).toList();
+      LoggerService.info(_tag, 'Retrieved ${response.length} students from database');
 
-        // Log that we're checking the students table separately
-        LoggerService.info(_tag,
-            'Attempting to fetch additional student details from students table');
+      // Process the response to ensure proper data structure
+      final processedResponse = response.map((user) {
+        // Safely access nested data with null checks
+        final studentData = user['students'] as List<dynamic>?;
+        final student = studentData?.isNotEmpty == true ? studentData!.first : null;
+        final departmentData = student?['departments'] as Map<String, dynamic>? ?? {};
+        
+        return {
+          'id': user['id']?.toString() ?? '',
+          'student_id': student?['student_id']?.toString() ?? '',
+          'name': user['full_name']?.toString() ?? 'Unknown',
+          'email': user['email']?.toString() ?? '',
+          'department': departmentData['name']?.toString() ?? 'Unknown',
+          'enrollment_date': student?['enrollment_date']?.toString() ?? '',
+          'academic_standing': student?['academic_standing']?.toString() ?? 'Unknown',
+          'status': user['status']?.toString() ?? 'active',
+        };
+      }).toList();
 
-        // Query the students table for these IDs
-        if (studentUserIds.isNotEmpty) {
-          final studentsResponse = await supabase
-              .from(AppConstants.tableStudents)
-              .select('*')
-              .inFilter('id', studentUserIds);
-
-          if (studentsResponse.isNotEmpty) {
-            LoggerService.info(_tag,
-                'Found ${studentsResponse.length} student details records');
-
-            // Create a map of student data by ID for easy lookup
-            final studentDetailsMap = {
-              for (var student in studentsResponse)
-                student['id'].toString(): student
-            };
-
-            // Update our student records with details from students table
-            for (int i = 0; i < studentRecords.length; i++) {
-              final userId = studentRecords[i]['id'].toString();
-              if (studentDetailsMap.containsKey(userId)) {
-                // Merge in student table data
-                final studentData = studentDetailsMap[userId]!;
-                studentRecords[i] = {
-                  ...studentRecords[i],
-                  ...studentData,
-                  // Keep the user field which has the user details
-                  'user': studentRecords[i]['user'],
-                };
-              }
-            }
-          } else {
-            LoggerService.info(
-                _tag, 'No matching records found in students table');
-          }
-        }
-      } catch (studentTableError) {
-        // If there's an issue with the students table, just continue with the user data we have
-        LoggerService.warning(_tag,
-            'Error querying students table: ${studentTableError.toString()}');
-      }
-
-      LoggerService.info(
-          _tag, 'Retrieved ${studentRecords.length} student records');
       return {
         'success': true,
         'message': 'Students retrieved successfully',
-        'data': studentRecords
+        'data': processedResponse,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Failed to retrieve students', e);
+      LoggerService.error(_tag, 'Error retrieving students', e);
       return {
         'success': false,
         'message': 'Failed to retrieve students: ${e.toString()}',

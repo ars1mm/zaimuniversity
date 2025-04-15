@@ -173,3 +173,15 @@ All foreign key relationships should be properly enforced at the database level 
 
 ### JSON Fields
 Both `contact_info` in the Students and Teachers tables and `preferences` in the Students table are JSON fields, allowing for flexible storage of structured data without requiring schema changes for new attributes.
+
+
+### Database Relationships
+1. One-to-one relationship between Users and Students/Teachers
+2. One-to-many relationship between Departments and Users (supervisors)
+3. One-to-many relationship between Departments and Courses
+4. One-to-many relationship between Teachers and Courses
+5. Many-to-many relationship between Students and Courses (via Course_Enrollments)
+6. One-to-many relationship between Courses and Course_Materials
+7. One-to-many relationship between Courses and Homework_Assignments
+8. One-to-many relationship between Homework_Assignments and Homework_Submissions
+9. One-to-many relationship between Students and Transcripts

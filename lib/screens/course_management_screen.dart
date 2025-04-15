@@ -44,27 +44,30 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
 
     try {
       final result = await _courseService.getAllCourses();
+      print('Raw courses data: $result'); // Debug log
 
       if (result['success'] && result['data'] != null) {
         final List<dynamic> coursesData = result['data'];
+        print('Courses data length: ${coursesData.length}'); // Debug log
 
         final List<Map<String, dynamic>> formattedCourses =
             coursesData.map<Map<String, dynamic>>((course) {
-          final departmentData = course[AppConstants.tableDepartments];
-          final String departmentName = departmentData != null
-              ? departmentData['name'] ?? 'Unknown'
-              : 'Unknown';
+          print('Processing course: $course'); // Debug log
 
-          return {
+          // Format the course data
+          final formattedCourse = {
             'id': course['id'] ?? '',
-            'title': course['title'] ?? '',
+            'title': course['title'] ?? 'Untitled Course',
             'capacity': course['capacity'] ?? 0,
             'semester': course['semester'] ?? '',
             'status': course['status'] ?? 'active',
-            'department': departmentName,
+            'department': course['department_name'] ?? 'Unknown',
             'description': course['description'] ?? '',
             'instructor_id': course['instructor_id'],
           };
+          
+          print('Formatted course: $formattedCourse'); // Debug log
+          return formattedCourse;
         }).toList();
 
         setState(() {
@@ -72,6 +75,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
           _isLoading = false;
         });
       } else {
+        print('Failed to load courses: ${result['message']}'); // Debug log
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load courses: ${result['message']}'),
@@ -83,6 +87,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
         });
       }
     } catch (e) {
+      print('Error loading courses: $e'); // Debug log
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -498,7 +503,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
                                 title: Text(
-                                  '${course['code']} - ${course['name']}',
+                                  course['title'] ?? 'Untitled Course',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -507,9 +512,10 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: 4),
-                                    Text('Department: ${course['department']}'),
-                                    Text('Credits: ${course['credits']}'),
-                                    if (course['description'] != null)
+                                    Text('Department: ${course['department'] ?? 'No Department'}'),
+                                    Text('Capacity: ${course['capacity'] ?? 0}'),
+                                    Text('Semester: ${course['semester'] ?? 'Not Set'}'),
+                                    if (course['description'] != null && course['description'].isNotEmpty)
                                       Text(
                                         course['description'],
                                         maxLines: 2,

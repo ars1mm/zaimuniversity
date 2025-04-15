@@ -1,136 +1,441 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
-import '../services/student_service.dart';
-import '../models/user.dart';
+import '../main.dart';
+import 'package:logging/logging.dart';
+import '../services/logger_service.dart';
 
 class StudentManagementScreen extends StatefulWidget {
-  static const routeName = '/manage_students'; // Define static route name
+  static const String routeName = '/manage_students';
 
   const StudentManagementScreen({super.key});
 
   @override
-  State<StudentManagementScreen> createState() =>
-      _StudentManagementScreenState();
+  State<StudentManagementScreen> createState() => _StudentManagementScreenState();
 }
 
 class _StudentManagementScreenState extends State<StudentManagementScreen> {
-  final StudentService _studentService = StudentService();
+  final Logger _logger = Logger('StudentManagementScreen');
   List<Map<String, dynamic>> _students = [];
   bool _isLoading = true;
   String _searchQuery = '';
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _studentIdController = TextEditingController();
   final _emailController = TextEditingController();
+  final _studentIdController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _departmentController = TextEditingController();
-  final _enrollmentYearController = TextEditingController();
+  List<Map<String, dynamic>> _departments = [];
+  String _selectedStatus = 'active';
+  String _selectedAcademicStanding = 'good';
 
   @override
   void initState() {
     super.initState();
+    _logger.info('Initializing StudentManagementScreen');
     _loadStudents();
+    _loadDepartments();
   }
 
   @override
   void dispose() {
+    _logger.info('Disposing StudentManagementScreen');
     _nameController.dispose();
-    _studentIdController.dispose();
     _emailController.dispose();
+    _studentIdController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
     _departmentController.dispose();
-    _enrollmentYearController.dispose();
     super.dispose();
   }
 
   Future<void> _loadStudents() async {
+    _logger.info('Loading students from database');
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Get real student data from the StudentService
-      final result = await _studentService.getAllStudents();
+      _logger.fine('Executing Supabase query for students');
+      final response = await supabase
+          .from(AppConstants.tableUsers)
+          .select('''
+            *,
+            students (
+              *,
+              departments (
+                name
+              )
+            )
+          ''')
+          .eq('role', AppConstants.roleStudent)
+          .order('full_name');
 
-      if (result['success'] && result['data'] != null) {
-        final List<dynamic> studentsData = result['data'];
+      _logger.fine('Received response from Supabase: ${response.toString()}');
 
-        // Convert the User objects to the format expected by the UI
-        final List<Map<String, dynamic>> formattedStudents =
-            studentsData.map<Map<String, dynamic>>((student) {
-          if (student is User) {
-            return {
-              'id': student.id,
-              'name': student.name,
-              'email': student.email,
-              'student_id': student.studentId,
-              'department': student.department,
-              'enrollment_year': student.enrollmentYear,
-              'status': 'active', // Assume active if not specified
-            };
-          } else {
-            // Handle cases where data might not be a User object
-            return {
-              'id': student['id'] ?? '',
-              'name': student['full_name'] ?? student['name'] ?? '',
-              'email': student['email'] ?? '',
-              'student_id': student['student_id'] ?? '',
-              'department': student['department'] ?? '',
-              'enrollment_year':
-                  student['enrollment_year'] ?? DateTime.now().year,
-              'status': student['status'] ?? 'active',
-            };
-          }
-        }).toList();
-
+      if (response != null) {
+        _logger.fine('Processing student data');
+        final List<dynamic> students = response as List<dynamic>;
+        final List<Map<String, dynamic>> studentMaps = students.cast<Map<String, dynamic>>();
+        
         setState(() {
-          _students = formattedStudents;
-          _isLoading = false;
+          _students = studentMaps.map((student) {
+            _logger.finer('Processing student: ${student['full_name']}');
+            final studentData = student['students'] as Map<String, dynamic>?;
+            _logger.finer('Student data: ${studentData?.toString()}');
+            return {
+              'id': student['id'],
+              'full_name': student['full_name'],
+              'email': student['email'],
+              'status': student['status'],
+              'students': studentData,
+            };
+          }).toList();
+          _logger.info('Successfully loaded ${_students.length} students');
         });
       } else {
-        // If there's an error or no data, show a message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load students: ${result['message']}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
+        _logger.warning('Received null response from Supabase');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.severe('Error loading students', e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text('Error loading students: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
-      setState(() {
-        _isLoading = false;
-      });
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _loadDepartments() async {
+    _logger.info('Loading departments from database');
+    try {
+      _logger.fine('Executing Supabase query for departments');
+      final response = await supabase
+          .from(AppConstants.tableDepartments)
+          .select()
+          .order('name');
+
+      _logger.fine('Received response from Supabase: ${response.toString()}');
+
+      if (response != null) {
+        _logger.fine('Processing department data');
+        final List<dynamic> departments = response as List<dynamic>;
+        setState(() {
+          _departments = departments.map((dept) {
+            _logger.finer('Processing department: ${dept['name']}');
+            return {
+              'id': dept['id'].toString(),
+              'name': dept['name']?.toString() ?? 'Unknown Department'
+            };
+          }).toList();
+          _logger.info('Successfully loaded ${_departments.length} departments');
+        });
+      } else {
+        _logger.warning('Received null response from Supabase');
+      }
+    } catch (e, stackTrace) {
+      _logger.severe('Error loading departments', e, stackTrace);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading departments: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   List<Map<String, dynamic>> get _filteredStudents {
+    _logger.fine('Filtering students with query: $_searchQuery');
     if (_searchQuery.isEmpty) {
+      _logger.fine('No search query, returning all students');
       return _students;
     }
 
     final query = _searchQuery.toLowerCase();
-    return _students.where((student) {
-      return student['name'].toString().toLowerCase().contains(query) ||
+    final filtered = _students.where((student) {
+      final studentData = student['students'] as Map<String, dynamic>?;
+      final matches = student['full_name'].toString().toLowerCase().contains(query) ||
           student['email'].toString().toLowerCase().contains(query) ||
-          student['student_id'].toString().toLowerCase().contains(query) ||
-          student['department'].toString().toLowerCase().contains(query);
+          (studentData?['student_id']?.toString().toLowerCase().contains(query) ?? false);
+      _logger.finer('Student ${student['full_name']} matches query: $matches');
+      return matches;
     }).toList();
+    
+    _logger.fine('Found ${filtered.length} matching students');
+    return filtered;
+  }
+
+  Future<void> _showAddStudentDialog() async {
+    _logger.info('Showing add student dialog');
+    _nameController.clear();
+    _emailController.clear();
+    _studentIdController.clear();
+    _addressController.clear();
+    _phoneController.clear();
+    _departmentController.clear();
+    _selectedStatus = 'active';
+    _selectedAcademicStanding = 'good';
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Student'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    hintText: 'Enter student\'s full name',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'Enter student\'s email',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter an email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _studentIdController,
+                  decoration: const InputDecoration(
+                    labelText: 'Student ID',
+                    hintText: 'Enter student ID',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a student ID';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address',
+                    hintText: 'Enter student\'s address',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    hintText: 'Enter student\'s phone number',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Department',
+                  ),
+                  items: _departments.map((department) {
+                    return DropdownMenuItem<String>(
+                      value: department['id'].toString(),
+                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    _logger.fine('Selected department: $value');
+                    _departmentController.text = value ?? '';
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a department';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                  ),
+                  value: _selectedStatus,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'active',
+                      child: Text('Active'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'inactive',
+                      child: Text('Inactive'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'suspended',
+                      child: Text('Suspended'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    _logger.fine('Selected status: $value');
+                    if (value != null) {
+                      setState(() {
+                        _selectedStatus = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Academic Standing',
+                  ),
+                  value: _selectedAcademicStanding,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'good',
+                      child: Text('Good'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'warning',
+                      child: Text('Warning'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'probation',
+                      child: Text('Probation'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    _logger.fine('Selected academic standing: $value');
+                    if (value != null) {
+                      setState(() {
+                        _selectedAcademicStanding = value;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _logger.info('Cancelled adding student');
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                _logger.info('Form validated, proceeding with student creation');
+                Navigator.of(context).pop();
+                setState(() => _isLoading = true);
+
+                try {
+                  _logger.fine('Creating user record');
+                  final userResponse = await supabase
+                      .from(AppConstants.tableUsers)
+                      .insert({
+                        'email': _emailController.text,
+                        'full_name': _nameController.text,
+                        'role': AppConstants.roleStudent,
+                        'status': _selectedStatus,
+                        'created_at': DateTime.now().toIso8601String(),
+                        'updated_at': DateTime.now().toIso8601String(),
+                      })
+                      .select()
+                      .single();
+
+                  _logger.fine('User record created: ${userResponse.toString()}');
+
+                  if (userResponse != null) {
+                    _logger.fine('Creating student record');
+                    await supabase
+                        .from(AppConstants.tableStudents)
+                        .insert({
+                          'id': userResponse['id'],
+                          'student_id': _studentIdController.text,
+                          'department_id': _departmentController.text,
+                          'address': _addressController.text,
+                          'contact_info': {
+                            'phone': _phoneController.text,
+                          },
+                          'enrollment_date': DateTime.now().toIso8601String(),
+                          'academic_standing': _selectedAcademicStanding,
+                          'preferences': {},
+                        });
+
+                    _logger.info('Student created successfully');
+                    _loadStudents();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Student added successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    _logger.warning('Failed to create user record');
+                    throw Exception('Failed to create user record');
+                  }
+                } catch (e, stackTrace) {
+                  _logger.severe('Error adding student', e, stackTrace);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to add student: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+
+                setState(() => _isLoading = false);
+              } else {
+                _logger.warning('Form validation failed');
+              }
+            },
+            child: const Text('Add Student'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEditStudentDialog(int index) {
+    _logger.info('Showing edit dialog for student at index $index');
     final student = _filteredStudents[index];
-    _nameController.text = student['name'];
-    _studentIdController.text = student['student_id'];
-    _emailController.text = student['email'];
-    _departmentController.text = student['department'];
-    _enrollmentYearController.text = student['enrollment_year'].toString();
+    final studentData = student['students'] as Map<String, dynamic>?;
+    final contactInfo = studentData?['contact_info'] as Map<String, dynamic>?;
+    final departmentData = studentData?['departments'] as Map<String, dynamic>?;
+    
+    _logger.fine('Student data for editing: ${student.toString()}');
+    
+    _nameController.text = student['full_name'] ?? '';
+    _emailController.text = student['email'] ?? '';
+    _studentIdController.text = studentData?['student_id'] ?? '';
+    _addressController.text = studentData?['address'] ?? '';
+    _phoneController.text = contactInfo?['phone'] ?? '';
+    _departmentController.text = departmentData?['name'] ?? '';
+    _selectedStatus = student['status'] ?? 'active';
+    _selectedAcademicStanding = studentData?['academic_standing'] ?? 'good';
 
     showDialog(
       context: context,
@@ -156,19 +461,6 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: _studentIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Student ID',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student ID';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email',
@@ -185,42 +477,109 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: _departmentController,
+                  controller: _studentIdController,
                   decoration: const InputDecoration(
-                    labelText: 'Department',
+                    labelText: 'Student ID',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter department';
+                      return 'Please enter student ID';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: _enrollmentYearController,
+                  controller: _addressController,
                   decoration: const InputDecoration(
-                    labelText: 'Enrollment Year',
+                    labelText: 'Address',
                   ),
-                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Department',
+                  ),
+                  items: _departments.map((department) {
+                    return DropdownMenuItem<String>(
+                      value: department['id'].toString(),
+                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    _logger.fine('Selected department: $value');
+                    _departmentController.text = value ?? '';
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter enrollment year';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Please enter a valid year';
+                      return 'Please select a department';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 12),
-                SwitchListTile(
-                  title: const Text('Active'),
-                  value: student['status'] == 'active',
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                  ),
+                  value: _selectedStatus,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'active',
+                      child: Text('Active'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'inactive',
+                      child: Text('Inactive'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'suspended',
+                      child: Text('Suspended'),
+                    ),
+                  ],
                   onChanged: (value) {
-                    setState(() {
-                      student['status'] = value ? 'active' : 'inactive';
-                    });
+                    _logger.fine('Selected status: $value');
+                    if (value != null) {
+                      setState(() {
+                        _selectedStatus = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Academic Standing',
+                  ),
+                  value: _selectedAcademicStanding,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'good',
+                      child: Text('Good'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'warning',
+                      child: Text('Warning'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'probation',
+                      child: Text('Probation'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    _logger.fine('Selected academic standing: $value');
+                    if (value != null) {
+                      setState(() {
+                        _selectedAcademicStanding = value;
+                      });
+                    }
                   },
                 ),
               ],
@@ -229,31 +588,40 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              _logger.info('Cancelled editing student');
+              Navigator.of(context).pop();
+            },
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
               if (_formKey.currentState!.validate()) {
+                _logger.info('Form validated, proceeding with student update');
                 setState(() {
-                  // Update the student
                   final originalStudentIndex =
                       _students.indexWhere((s) => s['id'] == student['id']);
                   if (originalStudentIndex != -1) {
+                    _logger.fine('Updating student at index $originalStudentIndex');
                     _students[originalStudentIndex] = {
                       'id': student['id'],
-                      'name': _nameController.text,
-                      'student_id': _studentIdController.text,
+                      'full_name': _nameController.text,
                       'email': _emailController.text,
-                      'department': _departmentController.text,
-                      'enrollment_year':
-                          int.parse(_enrollmentYearController.text),
-                      'status': student['status'],
+                      'status': _selectedStatus,
+                      'students': {
+                        'student_id': _studentIdController.text,
+                        'department_id': _departmentController.text,
+                        'address': _addressController.text,
+                        'contact_info': {
+                          'phone': _phoneController.text,
+                        },
+                        'academic_standing': _selectedAcademicStanding,
+                      },
                     };
+                    _logger.info('Student updated successfully');
                   }
                 });
 
-                // Show success message
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Student updated successfully'),
@@ -262,6 +630,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                 );
 
                 Navigator.of(context).pop();
+              } else {
+                _logger.warning('Form validation failed');
               }
             },
             child: const Text('Save Changes'),
@@ -272,6 +642,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   }
 
   void _confirmDeleteStudent(int index) {
+    _logger.info('Showing delete confirmation for student at index $index');
     final student = _filteredStudents[index];
 
     showDialog(
@@ -279,11 +650,14 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Student'),
         content: Text(
-          'Are you sure you want to delete "${student['name']}" (${student['student_id']})? This action cannot be undone.',
+          'Are you sure you want to delete "${student['full_name']}" (${student['students']['student_id']})? This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              _logger.info('Cancelled student deletion');
+              Navigator.of(context).pop();
+            },
             child: const Text('Cancel'),
           ),
           FilledButton(
@@ -291,11 +665,11 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               backgroundColor: MaterialStateProperty.all(Colors.red),
             ),
             onPressed: () {
+              _logger.info('Deleting student');
               setState(() {
                 _students.removeWhere((s) => s['id'] == student['id']);
               });
 
-              // Show success message
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Student deleted successfully'),
@@ -312,76 +686,19 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     );
   }
 
-  void _viewStudentDetails(int index) {
-    final student = _filteredStudents[index];
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(student['name']),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.badge),
-              title: const Text('Student ID'),
-              subtitle: Text(student['student_id']),
-            ),
-            ListTile(
-              leading: const Icon(Icons.email),
-              title: const Text('Email'),
-              subtitle: Text(student['email']),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school),
-              title: const Text('Department'),
-              subtitle: Text(student['department']),
-            ),
-            ListTile(
-              leading: const Icon(Icons.date_range),
-              title: const Text('Enrollment Year'),
-              subtitle: Text(student['enrollment_year'].toString()),
-            ),
-            ListTile(
-              leading: Icon(
-                student['status'] == 'active'
-                    ? Icons.check_circle
-                    : Icons.cancel,
-                color:
-                    student['status'] == 'active' ? Colors.green : Colors.red,
-              ),
-              title: const Text('Status'),
-              subtitle: Text(student['status'].toString().toUpperCase()),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _showEditStudentDialog(index);
-            },
-            child: const Text('Edit'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    _logger.fine('Building StudentManagementScreen');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Management'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadStudents,
+            onPressed: () {
+              _logger.info('Manual refresh triggered');
+              _loadStudents();
+            },
             tooltip: 'Refresh',
           ),
         ],
@@ -391,55 +708,35 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Row
-            TextField(
-              decoration: const InputDecoration(
-                hintText: 'Search students...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Statistics Row
             Row(
               children: [
-                _buildStatCard(
-                  'Total Students',
-                  _students.length.toString(),
-                  Icons.people,
-                  Colors.blue,
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search students...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _logger.fine('Search query changed: $value');
+                      setState(() {
+                        _searchQuery = value;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(width: 16),
-                _buildStatCard(
-                  'Active Students',
-                  _students
-                      .where((s) => s['status'] == 'active')
-                      .length
-                      .toString(),
-                  Icons.check_circle,
-                  Colors.green,
-                ),
-                const SizedBox(width: 16),
-                _buildStatCard(
-                  'Inactive Students',
-                  _students
-                      .where((s) => s['status'] != 'active')
-                      .length
-                      .toString(),
-                  Icons.cancel,
-                  Colors.red,
+                FilledButton.icon(
+                  onPressed: () {
+                    _logger.info('Add student button pressed');
+                    _showAddStudentDialog();
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Student'),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-
-            // Students List
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -457,70 +754,83 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                           itemCount: _filteredStudents.length,
                           itemBuilder: (context, index) {
                             final student = _filteredStudents[index];
+                            final studentData = student['students'] as Map<String, dynamic>?;
+                            final contactInfo = studentData?['contact_info'] as Map<String, dynamic>?;
+                            final departmentData = studentData?['departments'] as Map<String, dynamic>?;
+                            
+                            _logger.finer('Building student card for: ${student['full_name']}');
+                            
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.blue.shade100,
-                                  child: Text(
-                                    student['name']
-                                        .toString()
-                                        .substring(0, 1)
-                                        .toUpperCase(),
-                                    style: TextStyle(
-                                      color: Colors.blue.shade700,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
                                 title: Text(
-                                  student['name'],
+                                  student['full_name'] ?? 'Unknown Student',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                subtitle: Text(
-                                  '${student['student_id']} • ${student['department']}',
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(student['email'] ?? ''),
+                                    if (studentData != null) ...[
+                                      Text('Student ID: ${studentData['student_id'] ?? 'Not assigned'}'),
+                                      Text('Address: ${studentData['address'] ?? 'Not provided'}'),
+                                      if (contactInfo != null) ...[
+                                        Text('Phone: ${contactInfo['phone'] ?? 'Not provided'}'),
+                                      ],
+                                      if (departmentData != null) ...[
+                                        Text(
+                                          'Department: ${departmentData['name'] ?? 'Not assigned'}',
+                                          style: const TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                      Text(
+                                        'Academic Standing: ${studentData['academic_standing'] ?? 'Unknown'}',
+                                        style: TextStyle(
+                                          color: studentData['academic_standing'] == 'good'
+                                              ? Colors.green
+                                              : studentData['academic_standing'] == 'warning'
+                                                  ? Colors.orange
+                                                  : Colors.red,
+                                        ),
+                                      ),
+                                    ],
+                                    Text(
+                                      'Status: ${student['status'] ?? 'Unknown'}',
+                                      style: TextStyle(
+                                        color: student['status'] == 'active'
+                                            ? Colors.green
+                                            : student['status'] == 'inactive'
+                                                ? Colors.grey
+                                                : Colors.red,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // Status indicator
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: student['status'] == 'active'
-                                            ? Colors.green
-                                            : Colors.red,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // View details button
-                                    IconButton(
-                                      icon: const Icon(Icons.visibility),
-                                      onPressed: () =>
-                                          _viewStudentDetails(index),
-                                      color: Colors.blue,
-                                    ),
-                                    // Edit button
                                     IconButton(
                                       icon: const Icon(Icons.edit),
-                                      onPressed: () =>
-                                          _showEditStudentDialog(index),
+                                      onPressed: () {
+                                        _logger.info('Edit button pressed for student: ${student['full_name']}');
+                                        _showEditStudentDialog(index);
+                                      },
                                       color: Colors.blue,
                                     ),
-                                    // Delete button
                                     IconButton(
                                       icon: const Icon(Icons.delete),
-                                      onPressed: () =>
-                                          _confirmDeleteStudent(index),
+                                      onPressed: () {
+                                        _logger.info('Delete button pressed for student: ${student['full_name']}');
+                                        _confirmDeleteStudent(index);
+                                      },
                                       color: Colors.red,
                                     ),
                                   ],
                                 ),
-                                onTap: () => _viewStudentDetails(index),
                               ),
                             );
                           },
@@ -529,46 +839,12 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushNamed(context, '/add_student');
+          _logger.info('Floating action button pressed');
+          _showAddStudentDialog();
         },
-        icon: const Icon(Icons.person_add),
-        label: const Text('Add Student'),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        color: color.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: TextStyle(
-                  color: color.withOpacity(0.8),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+        child: const Icon(Icons.add),
       ),
     );
   }

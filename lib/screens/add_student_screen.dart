@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
-import '../services/student_service.dart';
-import '../utils/auth_middleware.dart';
-import '../widgets/custom_button.dart';
+import '../main.dart';
+import 'package:logging/logging.dart';
+import '../services/logger_service.dart';
 
 class AddStudentScreen extends StatefulWidget {
-  static const routeName = '/add-student';
+  static const String routeName = '/add_student';
 
   const AddStudentScreen({super.key});
 
@@ -14,24 +14,23 @@ class AddStudentScreen extends StatefulWidget {
 }
 
 class _AddStudentScreenState extends State<AddStudentScreen> {
+  final Logger _logger = Logger('AddStudentScreen');
   final _formKey = GlobalKey<FormState>();
-  final StudentService _studentService = StudentService();
-  bool _isLoading = false;
-
-  // Form fields
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _studentIdController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _departmentController = TextEditingController();
-  final _enrollmentYearController = TextEditingController();
+  List<Map<String, dynamic>> _departments = [];
+  String _selectedStatus = 'active';
+  String _selectedAcademicStanding = 'good';
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Check admin access when the screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AuthMiddleware.isAdmin(context);
-    });
+    _loadDepartments();
   }
 
   @override
@@ -39,187 +38,284 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _studentIdController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
     _departmentController.dispose();
-    _enrollmentYearController.dispose();
     super.dispose();
   }
 
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
+  Future<void> _loadDepartments() async {
+    try {
+      final response = await supabase
+          .from(AppConstants.tableDepartments)
+          .select()
+          .order('name');
+
+      if (response != null) {
+        final List<dynamic> departments = response as List<dynamic>;
+        setState(() {
+          _departments = departments.map((dept) => {
+            'id': dept['id'].toString(),
+            'name': dept['name']?.toString() ?? 'Unknown Department'
+          }).toList();
+        });
+      }
+    } catch (e) {
+      _logger.severe('Error loading departments', e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading departments: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _addStudent() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // First create the user record
+      final userResponse = await supabase
+          .from(AppConstants.tableUsers)
+          .insert({
+            'email': _emailController.text,
+            'full_name': _nameController.text,
+            'role': AppConstants.roleStudent,
+            'status': _selectedStatus,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      if (userResponse != null) {
+        // Then create the student record with the user's ID
+        await supabase
+            .from(AppConstants.tableStudents)
+            .insert({
+              'id': userResponse['id'], // This is the foreign key to users table
+              'student_id': _studentIdController.text,
+              'department_id': _departmentController.text,
+              'address': _addressController.text,
+              'contact_info': {
+                'phone': _phoneController.text,
+              },
+              'enrollment_date': DateTime.now().toIso8601String(),
+              'academic_standing': _selectedAcademicStanding,
+              'preferences': {},
+            });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Student added successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Clear the form
+        _formKey.currentState!.reset();
+        _nameController.clear();
+        _emailController.clear();
+        _studentIdController.clear();
+        _addressController.clear();
+        _phoneController.clear();
+        _departmentController.clear();
+        _selectedStatus = 'active';
+        _selectedAcademicStanding = 'good';
+      } else {
+        throw Exception('Failed to create user record');
+      }
+    } catch (e) {
+      _logger.severe('Error adding student', e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to add student: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    final result = await _studentService.addStudent(
-      name: _nameController.text,
-      email: _emailController.text,
-      studentId: _studentIdController.text,
-      department: _departmentController.text,
-      enrollmentYear: int.parse(_enrollmentYearController.text),
-    );
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result['message']),
-        backgroundColor: result['success'] ? Colors.green : Colors.red,
-      ),
-    );
-
-    if (result['success']) {
-      _formKey.currentState!.reset();
-      _nameController.clear();
-      _emailController.clear();
-      _studentIdController.clear();
-      _departmentController.clear();
-      _enrollmentYearController.clear();
-    }
+    setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AuthMiddleware.adminOnly(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Add New Student'),
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppConstants.defaultPadding),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Enter Student Information',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _studentIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Student ID',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student ID';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _departmentController,
-                  decoration: const InputDecoration(
-                    labelText: 'Department',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter department';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _enrollmentYearController,
-                  decoration: const InputDecoration(
-                    labelText: 'Enrollment Year',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter enrollment year';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Please enter a valid year';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : CustomButton(
-                        text: 'Add Student',
-                        onPressed: _submitForm,
-                      ),
-              ],
-            ),
-          ),
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add New Student'),
       ),
-      unauthorizedFallback: Scaffold(
-        appBar: AppBar(
-          title: const Text('Unauthorized Access'),
-        ),
-        body: const Center(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Form(
+          key: _formKey,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(
-                Icons.lock,
-                size: 64,
-                color: Colors.red,
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  hintText: 'Enter student\'s full name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a name';
+                  }
+                  return null;
+                },
               ),
-              SizedBox(height: 16),
-              Text(
-                'Admin Access Required',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'Enter student\'s email',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter an email';
+                  }
+                  if (!value.contains('@')) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _studentIdController,
+                decoration: const InputDecoration(
+                  labelText: 'Student ID',
+                  hintText: 'Enter student ID',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a student ID';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  hintText: 'Enter student\'s address',
+                  border: OutlineInputBorder(),
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
-                'You do not have permission to access this page.',
-                textAlign: TextAlign.center,
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  hintText: 'Enter student\'s phone number',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Department',
+                  border: OutlineInputBorder(),
+                ),
+                items: _departments.map((department) {
+                  return DropdownMenuItem<String>(
+                    value: department['id'],
+                    child: Text(department['name']),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _departmentController.text = value;
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a department';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Status',
+                  border: OutlineInputBorder(),
+                ),
+                value: _selectedStatus,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'active',
+                    child: Text('Active'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'inactive',
+                    child: Text('Inactive'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'suspended',
+                    child: Text('Suspended'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedStatus = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Academic Standing',
+                  border: OutlineInputBorder(),
+                ),
+                value: _selectedAcademicStanding,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'good',
+                    child: Text('Good'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'warning',
+                    child: Text('Warning'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'probation',
+                    child: Text('Probation'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedAcademicStanding = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _isLoading ? null : _addStudent,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Add Student'),
               ),
             ],
           ),

@@ -23,22 +23,37 @@ class CourseService {
         };
       }
 
-      // Fetch courses from Supabase
+      // Fetch courses from Supabase with proper join
       final response = await supabase
           .from(AppConstants.tableCourses)
-          .select('*, ${AppConstants.tableDepartments}(name)')
-          .order(
-              'title'); // Using 'title' field as defined in the database schema
+          .select('''
+            *,
+            ${AppConstants.tableDepartments} (
+              name
+            )
+          ''')
+          .order('title');
 
+      print('Supabase response: $response'); // Debug log
       LoggerService.info(
           _tag, 'Retrieved ${response.length} courses from database');
+
+      // Process the response to ensure proper data structure
+      final processedResponse = response.map((course) {
+        final department = course[AppConstants.tableDepartments] as Map<String, dynamic>?;
+        return {
+          ...course,
+          'department_name': department?['name'] ?? 'Unknown',
+        };
+      }).toList();
 
       return {
         'success': true,
         'message': 'Courses retrieved successfully',
-        'data': response,
+        'data': processedResponse,
       };
     } catch (e) {
+      print('Error in getAllCourses: $e'); // Debug log
       LoggerService.error(_tag, 'Error retrieving courses', e);
       return {
         'success': false,
