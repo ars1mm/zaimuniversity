@@ -6,6 +6,7 @@ import 'logger_service.dart';
 /// StudentServiceImpl handles student-specific database operations
 class StudentServiceImpl extends BaseService {
   static const String _tag = 'StudentServiceImpl';
+  final _logger = LoggerService();
 
   /// Adds a student record to the database
   Future<Map<String, dynamic>> addStudent({
@@ -18,13 +19,12 @@ class StudentServiceImpl extends BaseService {
     Map<String, dynamic>? contactInfo,
     DateTime? enrollmentDate,
   }) async {
-    LoggerService.info(_tag, 'Creating student record for: $name ($studentId)');
+    _logger.info('Creating student record for: $name ($studentId)', tag: _tag);
     try {
       // First, verify that the user record exists in the users table
       final userExists = await verifyUserExists(userId);
       if (!userExists) {
-        LoggerService.warning(_tag,
-            'User ID $userId does not exist in users table. Creating it now.');
+        _logger.warning('User ID $userId does not exist in users table. Creating it now.', tag: _tag);
 
         // Create the user record if it doesn't exist
         final userData = {
@@ -65,16 +65,14 @@ class StudentServiceImpl extends BaseService {
           .select()
           .single();
 
-      LoggerService.info(
-          _tag, 'Student record created successfully for ID: $studentId');
+      _logger.info('Student record created successfully for ID: $studentId', tag: _tag);
       return {
         'success': true,
         'message': 'Student added successfully',
         'data': response
       };
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Failed to create student record for ID: $studentId', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to create student record for ID: $studentId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to add student: ${e.toString()}',
@@ -84,7 +82,7 @@ class StudentServiceImpl extends BaseService {
 
   /// Retrieves all students from the database
   Future<Map<String, dynamic>> getAllStudents() async {
-    LoggerService.info(_tag, 'Retrieving all students');
+    _logger.info('Retrieving all students', tag: _tag);
     try {
       // Query the users table for users with student role and join with students and departments
       final response = await supabase
@@ -102,7 +100,7 @@ class StudentServiceImpl extends BaseService {
           .order('full_name');
 
       if (response.isEmpty) {
-        LoggerService.warning(_tag, 'No students found in the database');
+        _logger.warning('No students found in the database', tag: _tag);
         return {
           'success': true,
           'message': 'No students found',
@@ -110,7 +108,7 @@ class StudentServiceImpl extends BaseService {
         };
       }
 
-      LoggerService.info(_tag, 'Retrieved ${response.length} students from database');
+      _logger.info('Retrieved ${response.length} students from database', tag: _tag);
 
       // Process the response to ensure proper data structure
       final processedResponse = response.map((user) {
@@ -136,8 +134,8 @@ class StudentServiceImpl extends BaseService {
         'message': 'Students retrieved successfully',
         'data': processedResponse,
       };
-    } catch (e) {
-      LoggerService.error(_tag, 'Error retrieving students', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error retrieving students', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to retrieve students: ${e.toString()}',
@@ -147,7 +145,7 @@ class StudentServiceImpl extends BaseService {
 
   /// Gets a student by their ID
   Future<Map<String, dynamic>> getStudentById(String studentId) async {
-    LoggerService.info(_tag, 'Retrieving student with ID: $studentId');
+    _logger.info('Retrieving student with ID: $studentId', tag: _tag);
     try {
       final response = await supabase
           .from(AppConstants.tableStudents)
@@ -161,9 +159,8 @@ class StudentServiceImpl extends BaseService {
         'message': 'Student retrieved successfully',
         'data': response,
       };
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Failed to retrieve student with ID: $studentId', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to retrieve student with ID: $studentId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to retrieve student: ${e.toString()}',
@@ -179,7 +176,7 @@ class StudentServiceImpl extends BaseService {
     String? academicStanding,
     Map<String, dynamic>? preferences,
   }) async {
-    LoggerService.info(_tag, 'Updating student with ID: $userId');
+    _logger.info('Updating student with ID: $userId', tag: _tag);
     try {
       final Map<String, dynamic> updateData = {};
 
@@ -206,8 +203,8 @@ class StudentServiceImpl extends BaseService {
         'success': true,
         'message': 'Student updated successfully',
       };
-    } catch (e) {
-      LoggerService.error('Failed to update student with ID: $userId',_tag);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to update student with ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to update student: ${e.toString()}',
@@ -217,7 +214,7 @@ class StudentServiceImpl extends BaseService {
 
   /// Deletes a student
   Future<Map<String, dynamic>> deleteStudent(String userId) async {
-    LoggerService.info(_tag, 'Deleting student with ID: $userId');
+    _logger.info('Deleting student with ID: $userId', tag: _tag);
     try {
       // First delete from students table
       await supabase.from(AppConstants.tableStudents).delete().eq('id', userId);
@@ -229,8 +226,8 @@ class StudentServiceImpl extends BaseService {
         'success': true,
         'message': 'Student deleted successfully',
       };
-    } catch (e) {
-      LoggerService.error(_tag, 'Failed to delete student with ID: $userId', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to delete student with ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to delete student: ${e.toString()}',

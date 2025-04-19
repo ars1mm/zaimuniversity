@@ -5,6 +5,7 @@ import 'logger_service.dart';
 /// UserService handles all user-related database operations
 class UserService extends BaseService {
   static const String _tag = 'UserService';
+  final _logger = LoggerService();
   
   /// Creates a new user record in the database
   Future<Map<String, dynamic>> createUser({
@@ -14,7 +15,7 @@ class UserService extends BaseService {
     required String userId,
     String status = 'active',
   }) async {
-    LoggerService.info(_tag, 'Creating user record for: $email with role: $role');
+    _logger.info('Creating user record for: $email with role: $role', tag: _tag);
     try {
       final Map<String, dynamic> userData = {
         'id': userId, // Explicitly set the ID to match the auth user ID
@@ -32,14 +33,14 @@ class UserService extends BaseService {
           .select('id')
           .single();
 
-      LoggerService.info(_tag, 'Created user record with ID: ${response['id']}');
+      _logger.info('Created user record with ID: ${response['id']}', tag: _tag);
       return {
         'success': true,
         'message': 'User created successfully',
         'data': response
       };
-    } catch (e) {
-      LoggerService.error(_tag, 'Failed to create user record for: $email', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to create user record for: $email', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to create user: ${e.toString()}',
@@ -55,7 +56,7 @@ class UserService extends BaseService {
     String? role,
     String? status,
   }) async {
-    LoggerService.info(_tag, 'Updating user record for ID: $userId');
+    _logger.info('Updating user record for ID: $userId', tag: _tag);
     try {
       final Map<String, dynamic> userData = {
         'updated_at': DateTime.now().toIso8601String(),
@@ -71,13 +72,13 @@ class UserService extends BaseService {
           .update(userData)
           .eq('id', userId);
 
-      LoggerService.info(_tag, 'Updated user record with ID: $userId');
+      _logger.info('Updated user record with ID: $userId', tag: _tag);
       return {
         'success': true,
         'message': 'User updated successfully',
       };
-    } catch (e) {
-      LoggerService.error(_tag, 'Failed to update user record for ID: $userId', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to update user record for ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to update user: ${e.toString()}',
@@ -87,7 +88,7 @@ class UserService extends BaseService {
   
   /// Retrieves a user by their ID
   Future<Map<String, dynamic>> getUserById(String userId) async {
-    LoggerService.info(_tag, 'Retrieving user with ID: $userId');
+    _logger.info('Retrieving user with ID: $userId', tag: _tag);
     try {
       final response = await supabase
           .from(AppConstants.tableUsers)
@@ -100,8 +101,8 @@ class UserService extends BaseService {
         'message': 'User retrieved successfully',
         'data': response,
       };
-    } catch (e) {
-      LoggerService.error(_tag, 'Failed to retrieve user with ID: $userId', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to retrieve user with ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to retrieve user: ${e.toString()}',
@@ -111,7 +112,7 @@ class UserService extends BaseService {
   
   /// Deletes a user by their ID
   Future<Map<String, dynamic>> deleteUser(String userId) async {
-    LoggerService.info(_tag, 'Deleting user with ID: $userId');
+    _logger.info('Deleting user with ID: $userId', tag: _tag);
     try {
       await supabase
           .from(AppConstants.tableUsers)
@@ -122,8 +123,8 @@ class UserService extends BaseService {
         'success': true,
         'message': 'User deleted successfully',
       };
-    } catch (e) {
-      LoggerService.error(_tag, 'Failed to delete user with ID: $userId', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to delete user with ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to delete user: ${e.toString()}',

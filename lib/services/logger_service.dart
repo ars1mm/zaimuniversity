@@ -27,6 +27,20 @@ class LoggerService {
     });
   }
 
+  /// Static initialization method
+  static Future<void> init({
+    Level logLevel = Level.ALL,
+    bool enableFileLogging = false,
+  }) async {
+    Logger.root.level = logLevel;
+    // Additional initialization can be added here
+  }
+
+  /// Static method to get a logger instance
+  static Logger getLoggerForName(String name) {
+    return _instance.getLogger(name);
+  }
+
   /// Get a logger instance for a specific class or component
   Logger getLogger(String name) {
     if (!_loggers.containsKey(name)) {

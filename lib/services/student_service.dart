@@ -8,6 +8,7 @@ import 'supabase_service.dart';
 class StudentService {
   final AuthService _authService = AuthService();
   final SupabaseService _supabaseService = SupabaseService();
+  final _logger = LoggerService();
   static const String _tag = 'StudentService';
 
   /// Adds a new student to the system
@@ -20,22 +21,22 @@ class StudentService {
     required int enrollmentYear,
     String? password,
   }) async {
-    LoggerService.info(_tag, 'Attempting to add student: $name ($email)');
+    _logger.info('Attempting to add student: $name ($email)', tag: _tag);
 
     // First check if user has admin access
     final isAdmin = await _authService.isAdmin();
     if (!isAdmin) {
-      LoggerService.warning(
-          _tag, 'Unauthorized attempt to add student: $email');
+      _logger.warning('Unauthorized attempt to add student: $email', tag: _tag);
       return {
         'success': false,
         'message': 'Unauthorized: Admin privileges required',
       };
-    } // We're allowing any email format, but still log if it doesn't match a standard pattern
+    }
+
+    // We're allowing any email format, but still log if it doesn't match a standard pattern
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(email)) {
-      LoggerService.warning(_tag,
-          'Non-standard email format detected: $email (continuing anyway)');
+      _logger.warning('Non-standard email format detected: $email (continuing anyway)', tag: _tag);
     }
 
     try {
@@ -43,40 +44,37 @@ class StudentService {
       final cleanEmail = email.trim().toLowerCase();
 
       // Step 1: Create a user account in Auth
-      LoggerService.debug(
-          _tag, 'Step 1: Creating auth account for: $cleanEmail');
+      _logger.debug('Step 1: Creating auth account for: $cleanEmail', tag: _tag);
       final signUpResult = await _supabaseService.signUp(
         email: cleanEmail,
         password: password ?? generateDefaultPassword(studentId),
       );
 
       if (signUpResult.user == null) {
-        LoggerService.error(
-            _tag, 'Failed to create auth account for: $cleanEmail');
+        _logger.error('Failed to create auth account for: $cleanEmail', tag: _tag);
         return {
           'success': false,
           'message': 'Failed to create auth account',
         };
-      } // Step 2: Create a record in the users table
+      }
+
+      // Step 2: Create a record in the users table
       final userId = signUpResult.user!.id;
-      LoggerService.debug(
-          _tag, 'Step 2: Creating user record with ID: $userId');
+      _logger.debug('Step 2: Creating user record with ID: $userId', tag: _tag);
       final createUserResult = await _supabaseService.createUser(
-        userId: userId, // Pass the auth user ID to ensure consistency
+        userId: userId,
         email: cleanEmail,
         fullName: name,
         role: AppConstants.roleStudent,
       );
 
       if (!createUserResult['success']) {
-        LoggerService.error(_tag,
-            'Failed to create user record: ${createUserResult['message']}');
+        _logger.error('Failed to create user record: ${createUserResult['message']}', tag: _tag);
         return createUserResult;
       }
 
       // Step 3: Find the department ID
-      LoggerService.debug(
-          _tag, 'Step 3: Finding department ID for: $department');
+      _logger.debug('Step 3: Finding department ID for: $department', tag: _tag);
       final departmentResponse = await supabase
           .from(AppConstants.tableDepartments)
           .select('id')
@@ -86,8 +84,7 @@ class StudentService {
       String departmentId;
       if (departmentResponse == null) {
         // Department doesn't exist, create it
-        LoggerService.info(
-            _tag, 'Department not found. Creating new department: $department');
+        _logger.info('Department not found. Creating new department: $department', tag: _tag);
         final newDept = await supabase
             .from(AppConstants.tableDepartments)
             .insert({
@@ -97,38 +94,32 @@ class StudentService {
             .select('id')
             .single();
         departmentId = newDept['id'];
-        LoggerService.debug(
-            _tag, 'Created new department with ID: $departmentId');
+        _logger.debug('Created new department with ID: $departmentId', tag: _tag);
       } else {
         departmentId = departmentResponse['id'];
-        LoggerService.debug(
-            _tag, 'Found existing department with ID: $departmentId');
+        _logger.debug('Found existing department with ID: $departmentId', tag: _tag);
       }
 
       // Step 4: Add student details
-      LoggerService.debug(
-          _tag, 'Step 4: Adding student details for user ID: $userId');
+      _logger.debug('Step 4: Adding student details for user ID: $userId', tag: _tag);
       final addStudentResult = await _supabaseService.addStudent(
         name: name,
         email: cleanEmail,
         studentId: studentId,
         departmentId: departmentId,
         userId: userId,
-        enrollmentDate:
-            DateTime(enrollmentYear, 9, 1), // Assuming enrollment in September
+        enrollmentDate: DateTime(enrollmentYear, 9, 1), // Assuming enrollment in September
       );
 
       if (addStudentResult['success']) {
-        LoggerService.info(
-            _tag, 'Successfully added student: $name with ID: $studentId');
+        _logger.info('Successfully added student: $name with ID: $studentId', tag: _tag);
       } else {
-        LoggerService.error(_tag,
-            'Failed to add student details: ${addStudentResult['message']}');
+        _logger.error('Failed to add student details: ${addStudentResult['message']}', tag: _tag);
       }
 
       return addStudentResult;
-    } catch (e) {
-      LoggerService.error(_tag, 'Error adding student: $email', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error adding student: $email', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Error adding student: ${e.toString()}',
@@ -139,19 +130,18 @@ class StudentService {
   /// Generates a default password for new students based on their student ID
   String generateDefaultPassword(String studentId) {
     // A simple default password pattern
-    LoggerService.debug(
-        _tag, 'Generating default password for student ID: $studentId');
+    _logger.debug('Generating default password for student ID: $studentId', tag: _tag);
     return 'IZU${studentId.substring(0, 4)}!';
   }
 
   /// Lists all students - also restricted to admin users
   Future<Map<String, dynamic>> getAllStudents() async {
-    LoggerService.info(_tag, 'Fetching all students');
+    _logger.info('Fetching all students', tag: _tag);
 
     // Check if user has admin access
     final isAdmin = await _authService.isAdmin();
     if (!isAdmin) {
-      LoggerService.warning(_tag, 'Unauthorized attempt to fetch all students');
+      _logger.warning('Unauthorized attempt to fetch all students', tag: _tag);
       return {
         'success': false,
         'message': 'Unauthorized: Admin privileges required',
@@ -163,8 +153,7 @@ class StudentService {
 
       if (result['success'] && result['data'] != null) {
         final List<dynamic> studentsData = result['data'];
-        LoggerService.debug(
-            _tag, 'Retrieved ${studentsData.length} students from database');
+        _logger.debug('Retrieved ${studentsData.length} students from database', tag: _tag);
 
         final List<User> students = studentsData.map((json) {
           // Merge student data with user data
@@ -178,20 +167,18 @@ class StudentService {
           });
         }).toList();
 
-        LoggerService.info(
-            _tag, 'Successfully processed ${students.length} student records');
+        _logger.info('Successfully processed ${students.length} student records', tag: _tag);
         return {
           'success': true,
           'message': 'Students retrieved successfully',
           'data': students,
         };
       } else {
-        LoggerService.warning(
-            _tag, 'Failed to retrieve students: ${result['message']}');
+        _logger.warning('Failed to retrieve students: ${result['message']}', tag: _tag);
         return result;
       }
-    } catch (e) {
-      LoggerService.error(_tag, 'Error retrieving students', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error retrieving students', tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to retrieve students: ${e.toString()}',

@@ -10,9 +10,10 @@ import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
 import 'screens/teacher_management_screen.dart';
 import 'screens/create_course_screen.dart';
-import 'screens/manage_courses_screen.dart';
+// import 'screens/manage_courses_screen.dart';
 import 'screens/assign_supervisor_screen.dart';
 import 'screens/create_department_screen.dart';
+import './services/logger_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +24,7 @@ Future<void> main() async {
     enableFileLogging: true,
   );
 
-  final logger = LoggerService.getLogger('Main');
+  final logger = LoggerService.getLoggerForName('Main');
 
   // Load environment variables
   try {
@@ -88,9 +89,6 @@ class CampusInfoSystemApp extends StatelessWidget {
         '/manage_departments': (context) => const DepartmentManagementScreen(),
         '/assign_supervisor': (context) => const AssignSupervisorScreen(),
         '/create_department': (context) => const CreateDepartmentScreen(),
-        StudentManagementScreen.routeName: (context) => const StudentManagementScreen(),
-        TeacherManagementScreen.routeName: (context) => const TeacherManagementScreen(),
-        DepartmentManagementScreen.routeName: (context) => const DepartmentManagementScreen(),
       },
     );
   }

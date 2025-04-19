@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../constants/app_constants.dart';
@@ -37,9 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
 
-      if (success) {
-        if (!mounted) return;
-
+      if (success && mounted) {
         // Check user role and navigate accordingly
         final userRole = await _authService.getUserRole();
         if (!mounted) return;
@@ -54,8 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _showRoleBasedSnackBar('Login successful', Colors.green);
           // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
         }
-      } else {
-        if (!mounted) return;
+      } else if (mounted) {
         _showErrorSnackBar('Invalid email or password');
       }
     } catch (e) {
@@ -99,30 +97,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // University Logo
-                  Image.network(
-                    'https://www.izu.edu.tr/images/default-source/logo-galeri/1.jpg?sfvrsn=18698650_2',
+                  SvgPicture.asset(
+                    'assets/images/412431.svg',
                     height: 100,
                     fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Column(
-                        children: [
-                          Icon(Icons.school, size: 80, color: Colors.blue),
-                          Text('Campus Information System',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      );
-                    },
+                    placeholderBuilder: (context) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
                   const SizedBox(height: 24),
 

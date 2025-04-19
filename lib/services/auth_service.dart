@@ -14,6 +14,21 @@ class AuthService extends BaseService {
   final _logger = LoggerService();
   static const String _tag = 'AuthService';
 
+  /// Gets the user's role from the database
+  Future<String?> getUserRole() async {
+    try {
+      final user = await getCurrentUser();
+      if (user == null) {
+        _logger.warning('No authenticated user found', tag: _tag);
+        return null;
+      }
+      return user['role'] as String?;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting user role', tag: _tag, error: e, stackTrace: stackTrace);
+      return null;
+    }
+  }
+
   /// Checks if a user is currently logged in
   Future<bool> isLoggedIn() async {
     try {
@@ -50,7 +65,7 @@ class AuthService extends BaseService {
   }
 
   /// Logs in a user with email and password
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  Future<bool> login(String email, String password) async {
     try {
       _logger.info('Attempting login for user: $email', tag: _tag);
 
@@ -61,24 +76,14 @@ class AuthService extends BaseService {
 
       if (response.user == null) {
         _logger.warning('Login failed - no user returned', tag: _tag);
-        return {
-          'success': false,
-          'message': 'Login failed',
-        };
+        return false;
       }
 
       _logger.info('User logged in successfully', tag: _tag);
-      return {
-        'success': true,
-        'message': 'Login successful',
-        'user': response.user,
-      };
+      return true;
     } catch (e, stackTrace) {
       _logger.error('Login error', tag: _tag, error: e, stackTrace: stackTrace);
-      return {
-        'success': false,
-        'message': 'Login failed: ${e.toString()}',
-      };
+      return false;
     }
   }
 

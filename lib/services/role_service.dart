@@ -5,13 +5,14 @@ import 'logger_service.dart';
 /// RoleService handles role-checking operations for different user types
 class RoleService extends BaseService {
   static const String _tag = 'RoleService';
+  final _logger = LoggerService();
 
   /// Checks if the current user has admin role
   Future<bool> isAdmin() async {
-    LoggerService.debug(_tag, 'Checking if current user is admin');
+    _logger.debug('Checking if current user is admin', tag: _tag);
     final user = auth.currentUser;
     if (user == null) {
-      LoggerService.debug(_tag, 'No current user found during admin check');
+      _logger.debug('No current user found during admin check', tag: _tag);
       return false;
     }
 
@@ -23,21 +24,20 @@ class RoleService extends BaseService {
           .single();
 
       final isAdmin = userData['role'] == AppConstants.roleAdmin;
-      LoggerService.debug(_tag, 'User ${user.email} admin status: $isAdmin');
+      _logger.debug('User ${user.email} admin status: $isAdmin', tag: _tag);
       return isAdmin;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking admin status for user: ${user.email}', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error checking admin status for user: ${user.email}', tag: _tag, error: e, stackTrace: stackTrace);
       return false;
     }
   }
 
   /// Checks if the current user has teacher role
   Future<bool> isTeacher() async {
-    LoggerService.debug(_tag, 'Checking if current user is teacher');
+    _logger.debug('Checking if current user is teacher', tag: _tag);
     final user = auth.currentUser;
     if (user == null) {
-      LoggerService.debug(_tag, 'No current user found during teacher check');
+      _logger.debug('No current user found during teacher check', tag: _tag);
       return false;
     }
 
@@ -49,23 +49,20 @@ class RoleService extends BaseService {
           .single();
 
       final isTeacher = userData['role'] == AppConstants.roleTeacher;
-      LoggerService.debug(
-          _tag, 'User ${user.email} teacher status: $isTeacher');
+      _logger.debug('User ${user.email} teacher status: $isTeacher', tag: _tag);
       return isTeacher;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking teacher status for user: ${user.email}', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error checking teacher status for user: ${user.email}', tag: _tag, error: e, stackTrace: stackTrace);
       return false;
     }
   }
 
   /// Checks if the current user has supervisor role
   Future<bool> isSupervisor() async {
-    LoggerService.debug(_tag, 'Checking if current user is supervisor');
+    _logger.debug('Checking if current user is supervisor', tag: _tag);
     final user = auth.currentUser;
     if (user == null) {
-      LoggerService.debug(
-          _tag, 'No current user found during supervisor check');
+      _logger.debug('No current user found during supervisor check', tag: _tag);
       return false;
     }
 
@@ -77,22 +74,20 @@ class RoleService extends BaseService {
           .single();
 
       final isSupervisor = userData['role'] == AppConstants.roleSupervisor;
-      LoggerService.debug(
-          _tag, 'User ${user.email} supervisor status: $isSupervisor');
+      _logger.debug('User ${user.email} supervisor status: $isSupervisor', tag: _tag);
       return isSupervisor;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking supervisor status for user: ${user.email}', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error checking supervisor status for user: ${user.email}', tag: _tag, error: e, stackTrace: stackTrace);
       return false;
     }
   }
 
   /// Checks if the current user has student role
   Future<bool> isStudent() async {
-    LoggerService.debug(_tag, 'Checking if current user is student');
+    _logger.debug('Checking if current user is student', tag: _tag);
     final user = auth.currentUser;
     if (user == null) {
-      LoggerService.debug(_tag, 'No current user found during student check');
+      _logger.debug('No current user found during student check', tag: _tag);
       return false;
     }
 
@@ -104,12 +99,10 @@ class RoleService extends BaseService {
           .single();
 
       final isStudent = userData['role'] == AppConstants.roleStudent;
-      LoggerService.debug(
-          _tag, 'User ${user.email} student status: $isStudent');
+      _logger.debug('User ${user.email} student status: $isStudent', tag: _tag);
       return isStudent;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking student status for user: ${user.email}', e);
+    } catch (e, stackTrace) {
+      _logger.error('Error checking student status for user: ${user.email}', tag: _tag, error: e, stackTrace: stackTrace);
       return false;
     }
   }

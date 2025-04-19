@@ -19,6 +19,7 @@ dependencies:
   path_provider: ^2.1.1
   logger: ^2.5.0
   vm_service: 14.3.1
+  flutter_svg: ^2.0.9
 
 dev_dependencies:
   flutter_test:
@@ -30,6 +31,7 @@ flutter:
   assets:
     - ./.env
     - env/.env
+    - assets/images/
 
 dependency_overrides:
   async: ^2.13.0
