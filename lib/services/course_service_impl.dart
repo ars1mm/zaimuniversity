@@ -1,50 +1,42 @@
+import 'package:logging/logging.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'base_service.dart';
 import 'role_service.dart';
-import 'logger_service.dart';
 
 /// CourseServiceImpl handles course-related database operations
 class CourseServiceImpl extends BaseService {
-  static const String _tag = 'CourseServiceImpl';
+  final _logger = Logger('CourseServiceImpl');
   final RoleService _roleService = RoleService();
 
   /// Retrieves all courses from the database
-  Future<Map<String, dynamic>> getAllCourses() async {
-    LoggerService.info(_tag, 'Fetching all courses');
+  @override
+  Future<List<Map<String, dynamic>>> getCourses() async {
+    _logger.info('Fetching all courses');
 
     try {
       // Check if user has admin access
       final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(
-            _tag, 'Unauthorized attempt to fetch all courses');
-        return {
-          'success': false,
-          'message': 'Unauthorized: Admin privileges required',
-        };
+        _logger.warning('Unauthorized attempt to fetch all courses');
+        throw Exception('Unauthorized: Admin privileges required');
       }
 
-      // Fetch courses from Supabase
+      // Fetch courses from Supabase with proper join
       final response = await supabase
-          .from(AppConstants.tableCourses)
-          .select('*, ${AppConstants.tableDepartments}(name)')
+          .from('courses')
+          .select('''
+            *,
+            departments (name),
+            users!instructor_id (name)
+          ''')
           .order('title');
 
-      LoggerService.info(
-          _tag, 'Retrieved ${response.length} courses from database');
-
-      return {
-        'success': true,
-        'message': 'Courses retrieved successfully',
-        'data': response,
-      };
+      _logger.info('Retrieved ${response.length} courses from database');
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      LoggerService.error(_tag, 'Error retrieving courses', e);
-      return {
-        'success': false,
-        'message': 'Failed to retrieve courses: ${e.toString()}',
-      };
+      _logger.severe('Error retrieving courses', e);
+      throw Exception('Failed to retrieve courses: ${e.toString()}');
     }
   }
 
@@ -59,13 +51,13 @@ class CourseServiceImpl extends BaseService {
     String status = 'active',
     Map<String, dynamic>? schedule,
   }) async {
-    LoggerService.info(_tag, 'Adding course: $title');
+    _logger.info('Adding course: $title');
 
     try {
       // Check if user has admin access
       final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(_tag, 'Unauthorized attempt to add course');
+        _logger.warning('Unauthorized attempt to add course');
         return {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
@@ -82,7 +74,7 @@ class CourseServiceImpl extends BaseService {
 
       if (departmentResponse == null) {
         // Department doesn't exist, create it
-        LoggerService.info(_tag, 'Department not found. Creating: $department');
+        _logger.info('Department not found. Creating: $department');
         final newDept = await supabase
             .from(AppConstants.tableDepartments)
             .insert({
@@ -117,7 +109,7 @@ class CourseServiceImpl extends BaseService {
           .select()
           .single();
 
-      LoggerService.info(_tag, 'Course added successfully: $title');
+      _logger.info('Course added successfully: $title');
 
       return {
         'success': true,
@@ -125,7 +117,7 @@ class CourseServiceImpl extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error adding course', e);
+      _logger.severe('Error adding course', e);
       return {
         'success': false,
         'message': 'Failed to add course: ${e.toString()}',
@@ -145,13 +137,13 @@ class CourseServiceImpl extends BaseService {
     String status = 'active',
     Map<String, dynamic>? schedule,
   }) async {
-    LoggerService.info(_tag, 'Updating course ID: $id ($title)');
+    _logger.info('Updating course ID: $id ($title)');
 
     try {
       // Check if user has admin access
       final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(_tag, 'Unauthorized attempt to update course');
+        _logger.warning('Unauthorized attempt to update course');
         return {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
@@ -168,7 +160,7 @@ class CourseServiceImpl extends BaseService {
 
       if (departmentResponse == null) {
         // Department doesn't exist, create it
-        LoggerService.info(_tag, 'Department not found. Creating: $department');
+        _logger.info('Department not found. Creating: $department');
         final newDept = await supabase
             .from(AppConstants.tableDepartments)
             .insert({
@@ -202,7 +194,7 @@ class CourseServiceImpl extends BaseService {
           .select()
           .single();
 
-      LoggerService.info(_tag, 'Course updated successfully: $title');
+      _logger.info('Course updated successfully: $title');
 
       return {
         'success': true,
@@ -210,7 +202,7 @@ class CourseServiceImpl extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error updating course', e);
+      _logger.severe('Error updating course', e);
       return {
         'success': false,
         'message': 'Failed to update course: ${e.toString()}',
@@ -220,13 +212,13 @@ class CourseServiceImpl extends BaseService {
 
   /// Deletes a course by its ID
   Future<Map<String, dynamic>> deleteCourse(String courseId) async {
-    LoggerService.info(_tag, 'Deleting course with ID: $courseId');
+    _logger.info('Deleting course with ID: $courseId');
 
     try {
       // Check if user has admin access
       final isAdmin = await _roleService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(_tag, 'Unauthorized attempt to delete course');
+        _logger.warning('Unauthorized attempt to delete course');
         return {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
@@ -238,14 +230,14 @@ class CourseServiceImpl extends BaseService {
           .delete()
           .eq('id', courseId);
 
-      LoggerService.info(_tag, 'Course deleted successfully');
+      _logger.info('Course deleted successfully');
 
       return {
         'success': true,
         'message': 'Course deleted successfully',
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error deleting course', e);
+      _logger.severe('Error deleting course', e);
       return {
         'success': false,
         'message': 'Failed to delete course: ${e.toString()}',
@@ -255,7 +247,7 @@ class CourseServiceImpl extends BaseService {
 
   /// Gets course by ID
   Future<Map<String, dynamic>> getCourseById(String courseId) async {
-    LoggerService.info(_tag, 'Fetching course with ID: $courseId');
+    _logger.info('Fetching course with ID: $courseId');
 
     try {
       final response = await supabase
@@ -270,8 +262,7 @@ class CourseServiceImpl extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(
-          _tag, 'Error retrieving course with ID: $courseId', e);
+      _logger.severe('Error retrieving course with ID: $courseId', e);
       return {
         'success': false,
         'message': 'Failed to retrieve course: ${e.toString()}',

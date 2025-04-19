@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../services/course_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:logger/logger.dart';
 
 class CourseManagementScreen extends StatefulWidget {
   const CourseManagementScreen({super.key});
@@ -25,6 +26,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
   final _descriptionController = TextEditingController();
   final _searchCodeController = TextEditingController();
   String _selectedDepartmentId = '';
+  final _logger = Logger();
 
   @override
   void initState() {
@@ -45,76 +47,34 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
   }
 
   Future<void> _loadCourses() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
-      final result = await _courseService.getAllCourses();
-      print('Raw courses data: $result'); // Debug log
-
-      if (result['success'] && result['data'] != null) {
-        final List<dynamic> coursesData = result['data'];
-        print('Courses data length: ${coursesData.length}'); // Debug log
-
-        final List<Map<String, dynamic>> formattedCourses =
-            coursesData.map<Map<String, dynamic>>((course) {
-          print('Processing course: $course'); // Debug log
-
-          // Format the course data
-          final formattedCourse = {
-            'id': course['id'] ?? '',
-            'title': course['title'] ?? 'Untitled Course',
-            'capacity': course['capacity'] ?? 0,
-            'semester': course['semester'] ?? '',
-            'status': course['status'] ?? 'active',
-            'department': course['department_name'] ?? 'Unknown',
-            'description': course['description'] ?? '',
-            'instructor_id': course['instructor_id'],
-          };
-          
-          print('Formatted course: $formattedCourse'); // Debug log
-          return formattedCourse;
-        }).toList();
-
-        setState(() {
-          _courses = formattedCourses;
-          _isLoading = false;
-        });
-      } else {
-        print('Failed to load courses: ${result['message']}'); // Debug log
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load courses: ${result['message']}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading courses: $e'); // Debug log
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() => _isLoading = true);
+      final courses = await _courseService.getCourses();
       setState(() {
+        _courses = courses;
         _isLoading = false;
       });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading courses: ${e.toString()}')),
+        );
+      }
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _loadDepartments() async {
     try {
+      _logger.i('Loading departments...');
       final response = await _supabase
           .from(AppConstants.tableDepartments)
           .select()
           .order('name');
 
-      if (response != null) {
+      _logger.d('Received departments response: $response');
+
+      if (mounted) {
         setState(() {
           _departments = (response as List<dynamic>).map((dept) {
             return {
@@ -123,14 +83,15 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
             };
           }).toList();
         });
+      }    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading departments: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading departments: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -252,11 +213,13 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
-          ),
-          FilledButton(
+          ),          FilledButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
                 Navigator.of(context).pop();
+                if (!mounted) return;
+                
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 setState(() => _isLoading = true);
 
                 final result = await _courseService.addCourse(
@@ -267,19 +230,21 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   semester: _courseCodeController.text,
                 );
 
+                if (!mounted) return;
+                
                 setState(() => _isLoading = false);
 
                 if (result['success']) {
                   _loadCourses();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Course added successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Failed to add course: ${result['message']}'),
                       backgroundColor: Colors.red,
@@ -458,11 +423,13 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
-          ),
-          FilledButton(
+          ),          FilledButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
                 Navigator.of(context).pop();
+                if (!mounted) return;
+                
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 setState(() => _isLoading = true);
 
                 final result = await _courseService.updateCourse(
@@ -475,18 +442,20 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   status: selectedStatus,
                 );
 
+                if (!mounted) return;
+                
                 setState(() => _isLoading = false);
 
                 if (result['success']) {
                   _loadCourses();
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Course updated successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Failed to update course: ${result['message']}'),
                       backgroundColor: Colors.red,
@@ -516,17 +485,21 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
-          ),
-          FilledButton(
+          ),          FilledButton(
             style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Colors.red),
+              backgroundColor: WidgetStateProperty.all(Colors.red),
             ),
             onPressed: () async {
               Navigator.of(context).pop();
+              if (!mounted) return;
+              
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
               setState(() => _isLoading = true);
 
               final result = await _courseService.deleteCourse(course['id']);
 
+              if (!mounted) return;
+              
               setState(() => _isLoading = false);
 
               if (result['success']) {
@@ -534,14 +507,14 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   _courses.removeWhere((c) => c['id'] == course['id']);
                 });
 
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     content: Text('Course deleted successfully'),
                     backgroundColor: Colors.red,
                   ),
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   SnackBar(
                     content:
                         Text('Failed to delete course: ${result['message']}'),
@@ -736,8 +709,8 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCourseDialog,
-        child: const Icon(Icons.add),
         tooltip: 'Add Course',
+        child: const Icon(Icons.add),
       ),
     );
   }

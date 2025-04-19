@@ -1,64 +1,41 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:logging/logging.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'auth_service.dart';
-import 'logger_service.dart';
 
 class CourseService {
   final AuthService _authService = AuthService();
-  static const String _tag = 'CourseService';
+  final _supabase = Supabase.instance.client;
+  final _logger = Logger('CourseService');
 
   /// Get all courses from the database
-  Future<Map<String, dynamic>> getAllCourses() async {
-    LoggerService.info(_tag, 'Fetching all courses');
+  Future<List<Map<String, dynamic>>> getCourses() async {
+    _logger.info('Fetching all courses');
 
     try {
       // Check if user has admin access
       final isAdmin = await _authService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(
-            _tag, 'Unauthorized attempt to fetch all courses');
-        return {
-          'success': false,
-          'message': 'Unauthorized: Admin privileges required',
-        };
+        _logger.warning('Unauthorized attempt to fetch all courses');
+        throw Exception('Unauthorized: Admin privileges required');
       }
 
       // Fetch courses from Supabase with proper join
-      final response = await supabase
-          .from(AppConstants.tableCourses)
+      final response = await _supabase
+          .from('courses')
           .select('''
             *,
-            ${AppConstants.tableDepartments} (
-              name
-            )
+            departments (name),
+            users!instructor_id (name)
           ''')
           .order('title');
 
-      print('Supabase response: $response'); // Debug log
-      LoggerService.info(
-          _tag, 'Retrieved ${response.length} courses from database');
-
-      // Process the response to ensure proper data structure
-      final processedResponse = response.map((course) {
-        final department = course[AppConstants.tableDepartments] as Map<String, dynamic>?;
-        return {
-          ...course,
-          'department_name': department?['name'] ?? 'Unknown',
-        };
-      }).toList();
-
-      return {
-        'success': true,
-        'message': 'Courses retrieved successfully',
-        'data': processedResponse,
-      };
+      _logger.info('Retrieved ${response.length} courses from database');
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('Error in getAllCourses: $e'); // Debug log
-      LoggerService.error(_tag, 'Error retrieving courses', e);
-      return {
-        'success': false,
-        'message': 'Failed to retrieve courses: ${e.toString()}',
-      };
+      _logger.severe('Error retrieving courses', e);
+      throw Exception('Failed to retrieve courses: ${e.toString()}');
     }
   }
 
@@ -73,13 +50,13 @@ class CourseService {
     String status = 'active',
     Map<String, dynamic>? schedule,
   }) async {
-    LoggerService.info(_tag, 'Adding course: $title');
+    _logger.info('Adding course: $title');
 
     try {
       // Check if user has admin access
       final isAdmin = await _authService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(_tag, 'Unauthorized attempt to add course');
+        _logger.warning('Unauthorized attempt to add course');
         return {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
@@ -88,17 +65,17 @@ class CourseService {
 
       // Find or create department
       String departmentId;
-      final departmentResponse = await supabase
-          .from(AppConstants.tableDepartments)
+      final departmentResponse = await _supabase
+          .from('departments')
           .select('id')
           .eq('name', department)
           .maybeSingle();
 
       if (departmentResponse == null) {
         // Department doesn't exist, create it
-        LoggerService.info(_tag, 'Department not found. Creating: $department');
-        final newDept = await supabase
-            .from(AppConstants.tableDepartments)
+        _logger.info('Department not found. Creating: $department');
+        final newDept = await _supabase
+            .from('departments')
             .insert({
               'name': department,
               'description': 'Department of $department',
@@ -120,16 +97,16 @@ class CourseService {
         'status': status,
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
-        'created_by': supabase.auth.currentUser?.id,
+        'created_by': _supabase.auth.currentUser?.id,
       };
 
-      final response = await supabase
-          .from(AppConstants.tableCourses)
+      final response = await _supabase
+          .from('courses')
           .insert(courseData)
           .select()
           .single();
 
-      LoggerService.info(_tag, 'Course added successfully: ${response['id']}');
+      _logger.info('Course added successfully: ${response['id']}');
 
       return {
         'success': true,
@@ -137,7 +114,7 @@ class CourseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error adding course', e);
+      _logger.severe('Error adding course', e);
       return {
         'success': false,
         'message': 'Failed to add course: ${e.toString()}',
@@ -157,13 +134,13 @@ class CourseService {
     String status = 'active',
     Map<String, dynamic>? schedule,
   }) async {
-    LoggerService.info(_tag, 'Updating course ID: $id ($title)');
+    _logger.info('Updating course ID: $id ($title)');
 
     try {
       // Check if user has admin access
       final isAdmin = await _authService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(_tag, 'Unauthorized attempt to update course');
+        _logger.warning('Unauthorized attempt to update course');
         return {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
@@ -172,17 +149,17 @@ class CourseService {
 
       // Find or create department
       String departmentId;
-      final departmentResponse = await supabase
-          .from(AppConstants.tableDepartments)
+      final departmentResponse = await _supabase
+          .from('departments')
           .select('id')
           .eq('name', department)
           .maybeSingle();
 
       if (departmentResponse == null) {
         // Department doesn't exist, create it
-        LoggerService.info(_tag, 'Department not found. Creating: $department');
-        final newDept = await supabase
-            .from(AppConstants.tableDepartments)
+        _logger.info('Department not found. Creating: $department');
+        final newDept = await _supabase
+            .from('departments')
             .insert({
               'name': department,
               'description': 'Department of $department',
@@ -205,19 +182,19 @@ class CourseService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      await supabase
-          .from(AppConstants.tableCourses)
+      await _supabase
+          .from('courses')
           .update(courseData)
           .eq('id', id);
 
-      LoggerService.info(_tag, 'Course updated successfully: $id ($title)');
+      _logger.info('Course updated successfully: $id ($title)');
 
       return {
         'success': true,
         'message': 'Course updated successfully',
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error updating course', e);
+      _logger.severe('Error updating course', e);
       return {
         'success': false,
         'message': 'Failed to update course: ${e.toString()}',
@@ -227,13 +204,13 @@ class CourseService {
 
   /// Delete a course
   Future<Map<String, dynamic>> deleteCourse(String id) async {
-    LoggerService.info(_tag, 'Deleting course ID: $id');
+    _logger.info('Deleting course ID: $id');
 
     try {
       // Check if user has admin access
       final isAdmin = await _authService.isAdmin();
       if (!isAdmin) {
-        LoggerService.warning(_tag, 'Unauthorized attempt to delete course');
+        _logger.warning('Unauthorized attempt to delete course');
         return {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
@@ -241,20 +218,115 @@ class CourseService {
       }
 
       // Delete course
-      await supabase.from(AppConstants.tableCourses).delete().eq('id', id);
+      await _supabase.from('courses').delete().eq('id', id);
 
-      LoggerService.info(_tag, 'Course deleted successfully: $id');
+      _logger.info('Course deleted successfully: $id');
 
       return {
         'success': true,
         'message': 'Course deleted successfully',
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error deleting course', e);
+      _logger.severe('Error deleting course', e);
       return {
         'success': false,
         'message': 'Failed to delete course: ${e.toString()}',
       };
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getDepartments() async {
+    try {
+      _logger.info('Fetching departments');
+      final response = await _supabase
+          .from('departments')
+          .select('id, name')
+          .order('name');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      _logger.severe('Error fetching departments', e);
+      throw Exception('Failed to fetch departments: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTeachers() async {
+    try {
+      _logger.info('Fetching teachers');
+      final response = await _supabase
+          .from('users')
+          .select('id, name')
+          .eq('role', 'teacher')
+          .order('name');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      _logger.severe('Error fetching teachers', e);
+      throw Exception('Failed to fetch teachers: $e');
+    }
+  }
+
+  Future<void> createCourse({
+    required String title,
+    required String description,
+    required int capacity,
+    required String departmentId,
+    required String instructorId,
+  }) async {
+    try {
+      _logger.info('Creating new course: $title');
+      await _supabase.from('courses').insert({
+        'title': title,
+        'description': description,
+        'capacity': capacity,
+        'department_id': departmentId,
+        'instructor_id': instructorId,
+        'status': 'active',
+      });
+      _logger.info('Course created successfully: $title');
+    } catch (e) {
+      _logger.severe('Error creating course', e);
+      throw Exception('Failed to create course: $e');
+    }
+  }
+
+  Future<void> updateCourseDetails({
+    required String courseId,
+    String? title,
+    String? description,
+    int? capacity,
+    String? instructorId,
+    String? status,
+  }) async {
+    try {
+      _logger.info('Updating course: $courseId');
+      final updates = <String, dynamic>{};
+      if (title != null) updates['title'] = title;
+      if (description != null) updates['description'] = description;
+      if (capacity != null) updates['capacity'] = capacity;
+      if (instructorId != null) updates['instructor_id'] = instructorId;
+      if (status != null) updates['status'] = status;
+
+      await _supabase
+          .from('courses')
+          .update(updates)
+          .eq('id', courseId);
+      _logger.info('Course updated successfully: $courseId');
+    } catch (e) {
+      _logger.severe('Error updating course', e);
+      throw Exception('Failed to update course: $e');
+    }
+  }
+
+  Future<void> deleteCourseById(String courseId) async {
+    try {
+      _logger.info('Deleting course: $courseId');
+      await _supabase
+          .from('courses')
+          .delete()
+          .eq('id', courseId);
+      _logger.info('Course deleted successfully: $courseId');
+    } catch (e) {
+      _logger.severe('Error deleting course', e);
+      throw Exception('Failed to delete course: $e');
     }
   }
 }

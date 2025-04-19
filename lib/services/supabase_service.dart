@@ -1,116 +1,144 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
+import 'base_service.dart';
 import 'logger_service.dart';
 
-/// SupabaseService provides a centralized way to interact with the Supabase client.
-/// It handles common operations like authentication, table access, and error handling.
-class SupabaseService {
-  // Get the Supabase client from the main.dart file
-  final SupabaseClient supabase = Supabase.instance.client;
-  final GoTrueClient _auth = Supabase.instance.client.auth;
-  static const String _tag = 'SupabaseService'; // Authentication methods
+/// SupabaseService handles role-based access control checks
+class SupabaseService extends BaseService {
+  final _logger = LoggerService();
+  static const String _tag = 'SupabaseService';
+
+  /// Gets the user's role from the database
+  Future<String?> _getUserRole() async {
+    try {
+      final user = auth.currentUser;
+      if (user == null) {
+        _logger.warning('No authenticated user found', _tag);
+        return null;
+      }
+
+      final userData = await supabase
+          .from(AppConstants.tableUsers)
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+      return userData['role'] as String?;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting user role', _tag, e, stackTrace);
+      return null;
+    }
+  }
+
+  /// Checks if the current user has admin role
+  Future<bool> isAdmin() async {
+    final role = await _getUserRole();
+    return role == AppConstants.roleAdmin;
+  }
+
+  /// Checks if the current user has teacher role
+  Future<bool> isTeacher() async {
+    final role = await _getUserRole();
+    return role == AppConstants.roleTeacher;
+  }
+
+  /// Checks if the current user has supervisor role
+  Future<bool> isSupervisor() async {
+    final role = await _getUserRole();
+    return role == AppConstants.roleSupervisor;
+  }
+
+  /// Checks if the current user has student role
+  Future<bool> isStudent() async {
+    final role = await _getUserRole();
+    return role == AppConstants.roleStudent;
+  }
+
+  /// Gets the current authenticated user
+  Future<User?> getCurrentUser() async {
+    try {
+      _logger.info('Getting current user', _tag);
+      return auth.currentUser;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting current user', _tag, e, stackTrace);
+      return null;
+    }
+  }
+
+  // Authentication methods
   Future<AuthResponse> signUp(
       {required String email, required String password}) async {
-    LoggerService.info(_tag, 'Creating new user account for: $email');
+    _logger.info('Creating new user account', _tag);
     try {
       // Clean email and ensure it's in proper format
       final cleanEmail = email.trim().toLowerCase();
+      String authEmail = cleanEmail;
 
-      // Force email to be valid for Supabase by ensuring it has proper format
-      // We'll use the original email in the users table, but a valid one for auth
-      String authEmail;
-      if (!_isValidEmail(cleanEmail)) {
-        // Create a valid email for auth purposes while preserving the original in metadata
-        // This approach allows storing the user's intended email while satisfying Supabase
-        String sanitizedPart =
-            cleanEmail.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+      // If email doesn't contain @, append the institutional domain
+      if (!cleanEmail.contains('@')) {
+        String sanitizedPart = cleanEmail.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
         if (sanitizedPart.isEmpty) sanitizedPart = 'user';
         authEmail = '$sanitizedPart@zaim.edu.tr';
-        LoggerService.warning(_tag,
-            'Using fallback email for auth: $authEmail (original: $cleanEmail)');
-      } else {
-        authEmail = cleanEmail;
+        _logger.warning('Using fallback email for auth', _tag);
       }
 
-      // Proceed with sign up using potentially modified email
-      final result = await _auth.signUp(
+      final result = await auth.signUp(
         email: authEmail,
         password: password,
-        data: {
-          'original_email': cleanEmail
-        }, // Store original email in metadata
       );
 
       if (result.user != null) {
-        LoggerService.info(
-            _tag, 'Successfully created auth account for: $authEmail');
+        _logger.info('Successfully created auth account', _tag);
       } else {
-        LoggerService.warning(
-            _tag, 'Auth account creation returned null user for: $authEmail');
+        _logger.warning('Auth account creation returned null user', _tag);
       }
       return result;
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (e is AuthException) {
-        LoggerService.error(
-            _tag, 'Auth error creating account for: $email - ${e.message}', e);
+        _logger.error('Auth error creating account', _tag, e, stackTrace);
 
         // Special handling for common email issues
-        if (e == 'email_address_invalid') {
-          LoggerService.warning(
-              _tag, 'Email address rejected by Supabase: $email');
-          // Rethrow to let the calling code handle it appropriately
-        } else if (e.toString() == 'user_already_exists') {
-          LoggerService.warning(_tag, 'User already exists with email: $email');
+        if (e.message == 'email_address_invalid') {
+          _logger.warning('Email address rejected by Supabase', _tag);
+        } else if (e.message == 'user_already_exists') {
+          _logger.warning('User already exists', _tag);
         }
       } else {
-        LoggerService.error(
-            _tag, 'Failed to create auth account for: $email', e);
+        _logger.error('Failed to create auth account', _tag, e, stackTrace);
       }
-      rethrow; // Let the calling code handle the error
+      rethrow;
     }
   }
 
   Future<AuthResponse> signIn(
       {required String email, required String password}) async {
-    LoggerService.info(_tag, 'Attempting to sign in user: $email');
+    _logger.info('Attempting to sign in user', _tag);
     try {
-      final result =
-          await _auth.signInWithPassword(email: email, password: password);
+      final result = await auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
       if (result.user != null) {
-        LoggerService.info(_tag, 'Successfully signed in user: $email');
+        _logger.info('Successfully signed in user', _tag);
       } else {
-        LoggerService.warning(_tag, 'Sign in returned null user for: $email');
+        _logger.warning('Sign in returned null user', _tag);
       }
       return result;
-    } catch (e) {
-      LoggerService.error(_tag, 'Failed to sign in user: $email', e);
+    } catch (e, stackTrace) {
+      _logger.error('Failed to sign in user', _tag, e, stackTrace);
       rethrow;
     }
   }
 
   Future<void> signOut() async {
-    LoggerService.info(_tag, 'Signing out current user');
+    _logger.info('Signing out current user', _tag);
     try {
-      await _auth.signOut();
-      LoggerService.info(_tag, 'User signed out successfully');
-    } catch (e) {
-      LoggerService.error(_tag, 'Error signing out user', e);
+      await auth.signOut();
+      _logger.info('User signed out successfully', _tag);
+    } catch (e, stackTrace) {
+      _logger.error('Error signing out user', _tag, e, stackTrace);
       rethrow;
-    }
-  }
-
-  Future<User?> getCurrentUser() async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        LoggerService.debug(_tag, 'Current user retrieved: ${user.email}');
-      } else {
-        LoggerService.debug(_tag, 'No current user found');
-      }
-      return user;
-    } catch (e) {
-      LoggerService.error(_tag, 'Error getting current user', e);
-      return null;
     }
   }
 
@@ -122,7 +150,7 @@ class SupabaseService {
     required String userId, // Add userId parameter to ensure we use the auth ID
     String status = 'active',
   }) async {
-    LoggerService.info(
+    _logger.info(
         _tag, 'Creating user record for: $email with role: $role');
     try {
       final Map<String, dynamic> userData = {
@@ -141,7 +169,7 @@ class SupabaseService {
           .select('id')
           .single();
 
-      LoggerService.info(
+      _logger.info(
           _tag, 'Created user record with ID: ${response['id']}');
       return {
         'success': true,
@@ -149,7 +177,7 @@ class SupabaseService {
         'data': response
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Failed to create user record for: $email', e);
+      _logger.error(_tag, 'Failed to create user record for: $email', e);
       return {
         'success': false,
         'message': 'Failed to create user: ${e.toString()}',
@@ -168,12 +196,12 @@ class SupabaseService {
     Map<String, dynamic>? contactInfo,
     DateTime? enrollmentDate,
   }) async {
-    LoggerService.info(_tag, 'Creating student record for: $name ($studentId)');
+    _logger.info(_tag, 'Creating student record for: $name ($studentId)');
     try {
       // First, verify that the user record exists in the users table
       final userExists = await _verifyUserExists(userId);
       if (!userExists) {
-        LoggerService.warning(_tag,
+        _logger.warning(_tag,
             'User ID $userId does not exist in users table. Creating it now.');
 
         // Create the user record if it doesn't exist
@@ -215,7 +243,7 @@ class SupabaseService {
           .select()
           .single();
 
-      LoggerService.info(
+      _logger.info(
           _tag, 'Student record created successfully for ID: $studentId');
       return {
         'success': true,
@@ -223,7 +251,7 @@ class SupabaseService {
         'data': response
       };
     } catch (e) {
-      LoggerService.error(
+      _logger.error(
           _tag, 'Failed to create student record for ID: $studentId', e);
       return {
         'success': false,
@@ -233,7 +261,7 @@ class SupabaseService {
   }
 
   Future<Map<String, dynamic>> getAllStudents() async {
-    LoggerService.info(_tag, 'Retrieving all students');
+    _logger.info(_tag, 'Retrieving all students');
     try {
       // Join users and students tables to get complete student information
       final response = await supabase
@@ -245,7 +273,7 @@ class SupabaseService {
 
       // If no students were found, try a different query to diagnose the issue
       if (response.isEmpty) {
-        LoggerService.warning(_tag,
+        _logger.warning(_tag,
             'No students found with the primary query. Trying a direct query to check if students exist.');
 
         // Try a simple query to check if students table has any records at all
@@ -255,131 +283,26 @@ class SupabaseService {
             .limit(5);
 
         if (directQuery.isNotEmpty) {
-          LoggerService.warning(_tag,
+          _logger.warning(_tag,
               'Found ${directQuery.length} student records with direct query, but join failed. Possible join configuration issue.');
         } else {
-          LoggerService.warning(_tag,
+          _logger.warning(_tag,
               'No student records found even with direct query. Students table might be empty.');
         }
       }
 
-      LoggerService.info(_tag, 'Retrieved ${response.length} student records');
+      _logger.info(_tag, 'Retrieved ${response.length} student records');
       return {
         'success': true,
         'message': 'Students retrieved successfully',
         'data': response
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Failed to retrieve students', e);
+      _logger.error(_tag, 'Failed to retrieve students', e);
       return {
         'success': false,
         'message': 'Failed to retrieve students: ${e.toString()}',
       };
-    }
-  }
-
-  // Check user roles
-  Future<bool> isAdmin() async {
-    LoggerService.debug(_tag, 'Checking if current user is admin');
-    final user = _auth.currentUser;
-    if (user == null) {
-      LoggerService.debug(_tag, 'No current user found during admin check');
-      return false;
-    }
-
-    try {
-      final userData = await supabase
-          .from(AppConstants.tableUsers)
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-      final isAdmin = userData['role'] == AppConstants.roleAdmin;
-      LoggerService.debug(_tag, 'User ${user.email} admin status: $isAdmin');
-      return isAdmin;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking admin status for user: ${user.email}', e);
-      return false;
-    }
-  }
-
-  Future<bool> isTeacher() async {
-    LoggerService.debug(_tag, 'Checking if current user is teacher');
-    final user = _auth.currentUser;
-    if (user == null) {
-      LoggerService.debug(_tag, 'No current user found during teacher check');
-      return false;
-    }
-
-    try {
-      final userData = await supabase
-          .from(AppConstants.tableUsers)
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-      final isTeacher = userData['role'] == AppConstants.roleTeacher;
-      LoggerService.debug(
-          _tag, 'User ${user.email} teacher status: $isTeacher');
-      return isTeacher;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking teacher status for user: ${user.email}', e);
-      return false;
-    }
-  }
-
-  Future<bool> isSupervisor() async {
-    LoggerService.debug(_tag, 'Checking if current user is supervisor');
-    final user = _auth.currentUser;
-    if (user == null) {
-      LoggerService.debug(
-          _tag, 'No current user found during supervisor check');
-      return false;
-    }
-
-    try {
-      final userData = await supabase
-          .from(AppConstants.tableUsers)
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-      final isSupervisor = userData['role'] == AppConstants.roleSupervisor;
-      LoggerService.debug(
-          _tag, 'User ${user.email} supervisor status: $isSupervisor');
-      return isSupervisor;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking supervisor status for user: ${user.email}', e);
-      return false;
-    }
-  }
-
-  Future<bool> isStudent() async {
-    LoggerService.debug(_tag, 'Checking if current user is student');
-    final user = _auth.currentUser;
-    if (user == null) {
-      LoggerService.debug(_tag, 'No current user found during student check');
-      return false;
-    }
-
-    try {
-      final userData = await supabase
-          .from(AppConstants.tableUsers)
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-      final isStudent = userData['role'] == AppConstants.roleStudent;
-      LoggerService.debug(
-          _tag, 'User ${user.email} student status: $isStudent');
-      return isStudent;
-    } catch (e) {
-      LoggerService.error(
-          _tag, 'Error checking student status for user: ${user.email}', e);
-      return false;
     }
   }
 
@@ -401,7 +324,7 @@ class SupabaseService {
 
       return response != null;
     } catch (e) {
-      LoggerService.error(_tag, 'Error verifying user existence: $userId', e);
+      _logger.error(_tag, 'Error verifying user existence: $userId', e);
       return false;
     }
   }

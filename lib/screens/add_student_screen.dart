@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'package:logging/logging.dart';
-import '../services/logger_service.dart';
 
 class AddStudentScreen extends StatefulWidget {
   static const String routeName = '/add_student';
@@ -51,8 +50,8 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
           .select()
           .order('name');
 
-      if (response != null) {
-        final List<dynamic> departments = response as List<dynamic>;
+      final List<dynamic> departments = response as List<dynamic>;
+      if (mounted) {
         setState(() {
           _departments = departments.map((dept) => {
             'id': dept['id'].toString(),
@@ -62,12 +61,14 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
       }
     } catch (e) {
       _logger.severe('Error loading departments', e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading departments: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading departments: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -91,51 +92,53 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
           .select()
           .single();
 
-      if (userResponse != null) {
-        // Then create the student record with the user's ID
-        await supabase
-            .from(AppConstants.tableStudents)
-            .insert({
-              'id': userResponse['id'], // This is the foreign key to users table
-              'student_id': _studentIdController.text,
-              'department_id': _departmentController.text,
-              'address': _addressController.text,
-              'contact_info': {
-                'phone': _phoneController.text,
-              },
-              'enrollment_date': DateTime.now().toIso8601String(),
-              'academic_standing': _selectedAcademicStanding,
-              'preferences': {},
-            });
+      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Student added successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // Then create the student record with the user's ID
+      await supabase
+          .from(AppConstants.tableStudents)
+          .insert({
+            'id': userResponse['id'], // This is the foreign key to users table
+            'student_id': _studentIdController.text,
+            'department_id': _departmentController.text,
+            'address': _addressController.text,
+            'contact_info': {
+              'phone': _phoneController.text,
+            },
+            'enrollment_date': DateTime.now().toIso8601String(),
+            'academic_standing': _selectedAcademicStanding,
+            'preferences': {},
+          });
 
-        // Clear the form
-        _formKey.currentState!.reset();
-        _nameController.clear();
-        _emailController.clear();
-        _studentIdController.clear();
-        _addressController.clear();
-        _phoneController.clear();
-        _departmentController.clear();
-        _selectedStatus = 'active';
-        _selectedAcademicStanding = 'good';
-      } else {
-        throw Exception('Failed to create user record');
-      }
-    } catch (e) {
-      _logger.severe('Error adding student', e);
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add student: ${e.toString()}'),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Text('Student added successfully'),
+          backgroundColor: Colors.green,
         ),
       );
+
+      // Clear the form
+      _formKey.currentState!.reset();
+      _nameController.clear();
+      _emailController.clear();
+      _studentIdController.clear();
+      _addressController.clear();
+      _phoneController.clear();
+      _departmentController.clear();
+      _selectedStatus = 'active';
+      _selectedAcademicStanding = 'good';
+    } catch (e) {
+      _logger.severe('Error adding student', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add student: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
 
     setState(() => _isLoading = false);

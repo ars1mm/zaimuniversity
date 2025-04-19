@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'package:logging/logging.dart';
-import '../services/logger_service.dart';
 
 class DepartmentManagementScreen extends StatefulWidget {
   static const String routeName = '/manage_departments';
@@ -46,12 +45,16 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
           .select()
           .order('name');
 
+      if (!mounted) return;
+      
       setState(() {
         _departments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
       });
     } catch (e) {
       _logger.severe('Error loading departments', e);
+      if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading departments: ${e.toString()}'),
@@ -135,8 +138,11 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     'updated_at': DateTime.now().toIso8601String(),
                   });
 
+                  if (!mounted) return;
+                  
                   _loadDepartments();
 
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Department added successfully'),
@@ -144,6 +150,8 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     ),
                   );
                 } catch (e) {
+                  if (!mounted) return;
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Failed to add department: ${e.toString()}'),
@@ -152,7 +160,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   );
                 }
 
-                setState(() => _isLoading = false);
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
               }
             },
             child: const Text('Add Department'),
@@ -222,15 +232,21 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                       })
                       .eq('id', department['id']);
 
+                  if (!mounted) return;
+                  
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  
                   _loadDepartments();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Department updated successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
                 } catch (e) {
+                  if (!mounted) return;
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Failed to update department: ${e.toString()}'),
@@ -239,7 +255,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   );
                 }
 
-                setState(() => _isLoading = false);
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
               }
             },
             child: const Text('Save Changes'),
@@ -266,7 +284,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
           ),
           FilledButton(
             style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Colors.red),
+              backgroundColor: WidgetStateProperty.all(Colors.red),
             ),
             onPressed: () async {
               Navigator.of(context).pop();
@@ -278,6 +296,8 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                     .delete()
                     .eq('id', department['id']);
 
+                if (!mounted) return;
+                
                 setState(() {
                   _departments.removeWhere((d) => d['id'] == department['id']);
                 });
@@ -289,6 +309,8 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   ),
                 );
               } catch (e) {
+                if (!mounted) return;
+                
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Failed to delete department: ${e.toString()}'),
@@ -297,7 +319,9 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 );
               }
 
-              setState(() => _isLoading = false);
+              if (mounted) {
+                setState(() => _isLoading = false);
+              }
             },
             child: const Text('Delete'),
           ),

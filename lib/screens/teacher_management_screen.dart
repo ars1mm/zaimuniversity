@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'package:logging/logging.dart';
-import '../services/logger_service.dart';
 
 class TeacherManagementScreen extends StatefulWidget {
   static const String routeName = '/manage_teachers';
@@ -61,12 +60,15 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
       });
     } catch (e) {
       _logger.severe('Error loading teachers', e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading teachers: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading teachers: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
       setState(() {
         _isLoading = false;
       });
@@ -251,39 +253,39 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                       .select()
                       .single();
 
-                  if (userResponse != null) {
-                    // Then create the teacher record with the user's ID
-                    await supabase
-                        .from(AppConstants.tableTeachers)
-                        .insert({
-                          'id': userResponse['id'], // This is the foreign key to users table
-                          'department_id': _departmentController.text,
-                          'specialization': _specializationController.text,
-                          'bio': _bioController.text,
-                          'status': _selectedStatus,
-                          'contact_info': {
-                            'email': _emailController.text,
-                          },
-                        });
+                  // Then create the teacher record with the user's ID
+                  await supabase
+                      .from(AppConstants.tableTeachers)
+                      .insert({
+                        'id': userResponse['id'], // This is the foreign key to users table
+                        'department_id': _departmentController.text,
+                        'specialization': _specializationController.text,
+                        'bio': _bioController.text,
+                        'status': _selectedStatus,
+                        'contact_info': {
+                          'email': _emailController.text,
+                        },
+                      });
 
-                    _loadTeachers();
+                  _loadTeachers();
 
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Teacher added successfully'),
                         backgroundColor: Colors.green,
                       ),
                     );
-                  } else {
-                    throw Exception('Failed to create user record');
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to add teacher: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to add teacher: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
 
                 setState(() => _isLoading = false);
@@ -453,21 +455,26 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                       })
                       .eq('id', teacher['id']);
 
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
                   _loadTeachers();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Teacher updated successfully'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  if (mounted) {
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Teacher updated successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to update teacher: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update teacher: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
 
                 setState(() => _isLoading = false);
@@ -497,7 +504,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
           ),
           FilledButton(
             style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Colors.red),
+              backgroundColor: WidgetStateProperty.all(Colors.red),
             ),
             onPressed: () async {
               Navigator.of(context).pop();
@@ -520,6 +527,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                   _teachers.removeWhere((t) => t['id'] == teacher['id']);
                 });
 
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Teacher deleted successfully'),
@@ -527,6 +535,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                   ),
                 );
               } catch (e) {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Failed to delete teacher: ${e.toString()}'),

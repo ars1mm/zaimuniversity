@@ -1,12 +1,12 @@
+import 'package:logging/logging.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'base_service.dart';
 import 'role_service.dart';
-import 'logger_service.dart';
 
 /// CourseEnrollmentService handles operations related to course enrollments and materials
 class CourseEnrollmentService extends BaseService {
-  static const String _tag = 'CourseEnrollmentService';
+  final _logger = Logger('CourseEnrollmentService');
   final RoleService _roleService = RoleService();
 
   /// Enrolls a student in a course
@@ -14,8 +14,7 @@ class CourseEnrollmentService extends BaseService {
     required String courseId,
     required String studentId,
   }) async {
-    LoggerService.info(
-        _tag, 'Enrolling student $studentId in course $courseId');
+    _logger.info('Enrolling student $studentId in course $courseId');
 
     try {
       // Check if already enrolled
@@ -27,7 +26,7 @@ class CourseEnrollmentService extends BaseService {
           .maybeSingle();
 
       if (existingEnrollment != null) {
-        LoggerService.warning(_tag, 'Student already enrolled in this course');
+        _logger.warning('Student already enrolled in this course');
         return {
           'success': false,
           'message': 'Student is already enrolled in this course',
@@ -48,7 +47,7 @@ class CourseEnrollmentService extends BaseService {
           .select()
           .single();
 
-      LoggerService.info(_tag, 'Student successfully enrolled in course');
+      _logger.info('Student successfully enrolled in course');
 
       return {
         'success': true,
@@ -56,7 +55,7 @@ class CourseEnrollmentService extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error enrolling student in course', e);
+      _logger.severe('Error enrolling student in course', e);
       return {
         'success': false,
         'message': 'Failed to enroll student: ${e.toString()}',
@@ -66,7 +65,7 @@ class CourseEnrollmentService extends BaseService {
 
   /// Gets all enrollments for a specific course
   Future<Map<String, dynamic>> getCourseEnrollments(String courseId) async {
-    LoggerService.info(_tag, 'Fetching enrollments for course: $courseId');
+    _logger.info('Fetching enrollments for course: $courseId');
 
     try {
       // Check if user has admin or teacher access
@@ -74,8 +73,8 @@ class CourseEnrollmentService extends BaseService {
       final isTeacher = await _roleService.isTeacher();
 
       if (!isAdmin && !isTeacher) {
-        LoggerService.warning(
-            _tag, 'Unauthorized attempt to fetch course enrollments');
+        _logger.warning(
+            'Unauthorized attempt to fetch course enrollments');
         return {
           'success': false,
           'message': 'Unauthorized: Admin or teacher privileges required',
@@ -88,8 +87,15 @@ class CourseEnrollmentService extends BaseService {
               '*, ${AppConstants.tableStudents}(student_id, ${AppConstants.tableUsers}(full_name, email))')
           .eq('course_id', courseId);
 
-      LoggerService.info(_tag,
-          'Retrieved ${response.length} enrollments for course $courseId');
+      if (response.isEmpty) {
+        _logger.warning('No enrollments found for course: $courseId');
+        return {
+          'success': false,
+          'message': 'No enrollments found for this course',
+        };
+      }
+
+      _logger.info('Retrieved ${response.length} enrollments for course: $courseId');
 
       return {
         'success': true,
@@ -97,7 +103,7 @@ class CourseEnrollmentService extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error fetching course enrollments', e);
+      _logger.severe('Error fetching course enrollments', e);
       return {
         'success': false,
         'message': 'Failed to retrieve course enrollments: ${e.toString()}',
@@ -107,7 +113,7 @@ class CourseEnrollmentService extends BaseService {
 
   /// Gets all courses a student is enrolled in
   Future<Map<String, dynamic>> getStudentEnrollments(String studentId) async {
-    LoggerService.info(_tag, 'Fetching enrollments for student: $studentId');
+    _logger.info('Fetching enrollments for student: $studentId');
 
     try {
       final response = await supabase
@@ -116,8 +122,15 @@ class CourseEnrollmentService extends BaseService {
               '*, ${AppConstants.tableCourses}(title, description, schedule, semester, ${AppConstants.tableDepartments}(name))')
           .eq('student_id', studentId);
 
-      LoggerService.info(_tag,
-          'Retrieved ${response.length} enrollments for student $studentId');
+      if (response.isEmpty) {
+        _logger.warning('No enrollments found for student: $studentId');
+        return {
+          'success': false,
+          'message': 'No enrollments found for this student',
+        };
+      }
+
+      _logger.info('Retrieved ${response.length} enrollments for student: $studentId');
 
       return {
         'success': true,
@@ -125,7 +138,7 @@ class CourseEnrollmentService extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error fetching student enrollments', e);
+      _logger.severe('Error fetching student enrollments', e);
       return {
         'success': false,
         'message': 'Failed to retrieve student enrollments: ${e.toString()}',
@@ -141,7 +154,7 @@ class CourseEnrollmentService extends BaseService {
     required String fileUrl,
     required String fileType,
   }) async {
-    LoggerService.info(_tag, 'Adding material to course $courseId: $title');
+    _logger.info('Adding material to course $courseId: $title');
 
     try {
       // Check if user has admin or teacher access
@@ -149,8 +162,8 @@ class CourseEnrollmentService extends BaseService {
       final isTeacher = await _roleService.isTeacher();
 
       if (!isAdmin && !isTeacher) {
-        LoggerService.warning(
-            _tag, 'Unauthorized attempt to add course material');
+        _logger.warning(
+            'Unauthorized attempt to add course material');
         return {
           'success': false,
           'message': 'Unauthorized: Admin or teacher privileges required',
@@ -173,7 +186,7 @@ class CourseEnrollmentService extends BaseService {
           .select()
           .single();
 
-      LoggerService.info(_tag, 'Course material added successfully');
+      _logger.info('Course material added successfully');
 
       return {
         'success': true,
@@ -181,7 +194,7 @@ class CourseEnrollmentService extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error adding course material', e);
+      _logger.severe('Error adding course material', e);
       return {
         'success': false,
         'message': 'Failed to add course material: ${e.toString()}',
@@ -191,7 +204,7 @@ class CourseEnrollmentService extends BaseService {
 
   /// Gets all materials for a course
   Future<Map<String, dynamic>> getCourseMaterials(String courseId) async {
-    LoggerService.info(_tag, 'Fetching materials for course: $courseId');
+    _logger.info('Fetching materials for course: $courseId');
 
     try {
       final response = await supabase
@@ -200,8 +213,15 @@ class CourseEnrollmentService extends BaseService {
           .eq('course_id', courseId)
           .order('uploaded_at', ascending: false);
 
-      LoggerService.info(
-          _tag, 'Retrieved ${response.length} materials for course $courseId');
+      if (response.isEmpty) {
+        _logger.warning('No materials found for course: $courseId');
+        return {
+          'success': false,
+          'message': 'No materials found for this course',
+        };
+      }
+
+      _logger.info('Retrieved ${response.length} materials for course: $courseId');
 
       return {
         'success': true,
@@ -209,7 +229,7 @@ class CourseEnrollmentService extends BaseService {
         'data': response,
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error fetching course materials', e);
+      _logger.severe('Error fetching course materials', e);
       return {
         'success': false,
         'message': 'Failed to retrieve course materials: ${e.toString()}',
@@ -219,7 +239,7 @@ class CourseEnrollmentService extends BaseService {
 
   /// Deletes a course material
   Future<Map<String, dynamic>> deleteCourseMaterial(String materialId) async {
-    LoggerService.info(_tag, 'Deleting course material: $materialId');
+    _logger.info('Deleting course material: $materialId');
 
     try {
       // Check if user has admin or teacher access
@@ -227,8 +247,8 @@ class CourseEnrollmentService extends BaseService {
       final isTeacher = await _roleService.isTeacher();
 
       if (!isAdmin && !isTeacher) {
-        LoggerService.warning(
-            _tag, 'Unauthorized attempt to delete course material');
+        _logger.warning(
+            'Unauthorized attempt to delete course material');
         return {
           'success': false,
           'message': 'Unauthorized: Admin or teacher privileges required',
@@ -240,14 +260,14 @@ class CourseEnrollmentService extends BaseService {
           .delete()
           .eq('id', materialId);
 
-      LoggerService.info(_tag, 'Course material deleted successfully');
+      _logger.info('Course material deleted successfully');
 
       return {
         'success': true,
         'message': 'Course material deleted successfully',
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Error deleting course material', e);
+      _logger.severe('Error deleting course material', e);
       return {
         'success': false,
         'message': 'Failed to delete course material: ${e.toString()}',

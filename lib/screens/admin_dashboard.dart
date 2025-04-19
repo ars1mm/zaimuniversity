@@ -24,7 +24,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final user = await _authService.getCurrentUser();
     if (user != null && mounted) {
       setState(() {
-        _adminName = user.name;
+        _adminName = user['full_name'] ?? 'Administrator';
       });
     }
   }
@@ -120,14 +120,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person_add),
-              title: const Text('Assign Supervisor'),
+              leading: const Icon(Icons.supervisor_account),
+              title: const Text('Create Supervisor'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/assign_supervisor');
+              },
             ),
             ListTile(
-              leading: const Icon(Icons.person_add),
+              leading: const Icon(Icons.business),
+              title: const Text('Create Department'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/create_department');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_circle),
+              title: const Text('Create Course'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/create_course');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_alt),
               title: const Text('Manage Teachers'),
               onTap: () {
                 Navigator.pop(context);

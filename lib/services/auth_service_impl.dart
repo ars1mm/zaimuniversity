@@ -1,15 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'base_service.dart';
-import 'logger_service.dart';
+import 'package:logging/logging.dart';
 
 /// AuthServiceImpl handles all authentication related operations using Supabase.
 class AuthServiceImpl extends BaseService {
   static const String _tag = 'AuthServiceImpl';
+  
 
   /// Signs up a new user with the given email and password
   Future<AuthResponse> signUp(
       {required String email, required String password}) async {
-    LoggerService.info(_tag, 'Creating new user account for: $email');
+    Logger.(_tag, 'Creating new user account for: $email');
     try {
       // Clean email and ensure it's in proper format
       final cleanEmail = email.trim().toLowerCase();

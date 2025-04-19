@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'package:logging/logging.dart';
-import '../services/logger_service.dart';
 
 class StudentManagementScreen extends StatefulWidget {
   static const String routeName = '/manage_students';
@@ -88,11 +87,11 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
 
       _logger.fine('Received response from Supabase: ${response.toString()}');
 
-      if (response != null) {
-        _logger.fine('Processing student data');
-        final List<dynamic> students = response as List<dynamic>;
-        final List<Map<String, dynamic>> studentMaps = students.cast<Map<String, dynamic>>();
-        
+      _logger.fine('Processing student data');
+      final List<dynamic> students = response as List<dynamic>;
+      final List<Map<String, dynamic>> studentMaps = students.cast<Map<String, dynamic>>();
+      
+      if (mounted) {
         setState(() {
           _students = studentMaps.map((student) {
             _logger.finer('Processing student: ${student['full_name']}');
@@ -121,14 +120,6 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           }).toList();
           _logger.info('Successfully loaded ${_students.length} students');
         });
-      } else {
-        _logger.warning('Received null response from Supabase');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No students found'),
-            backgroundColor: Colors.orange,
-          ),
-        );
       }
     } catch (e, stackTrace) {
       _logger.severe('Error loading students', e, stackTrace);
@@ -160,30 +151,28 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
 
       _logger.fine('Received response from Supabase: ${response.toString()}');
 
-      if (response != null) {
-        _logger.fine('Processing department data');
-        final List<dynamic> departments = response as List<dynamic>;
-        setState(() {
-          _departments = departments.map((dept) {
-            _logger.finer('Processing department: ${dept['name']}');
-            return {
-              'id': dept['id'].toString(),
-              'name': dept['name']?.toString() ?? 'Unknown Department'
-            };
-          }).toList();
-          _logger.info('Successfully loaded ${_departments.length} departments');
-        });
-      } else {
-        _logger.warning('Received null response from Supabase');
-      }
+      _logger.fine('Processing department data');
+      final List<dynamic> departments = response as List<dynamic>;
+      setState(() {
+        _departments = departments.map((dept) {
+          _logger.finer('Processing department: ${dept['name']}');
+          return {
+            'id': dept['id'].toString(),
+            'name': dept['name']?.toString() ?? 'Unknown Department'
+          };
+        }).toList();
+        _logger.info('Successfully loaded ${_departments.length} departments');
+      });
     } catch (e, stackTrace) {
       _logger.severe('Error loading departments', e, stackTrace);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading departments: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading departments: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -219,9 +208,11 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     _selectedStatus = 'active';
     _selectedAcademicStanding = 'good';
 
+    final currentContext = context;
+    
     await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: currentContext,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Add New Student'),
         content: SingleChildScrollView(
           child: Form(
@@ -377,7 +368,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           TextButton(
             onPressed: () {
               _logger.info('Cancelled adding student');
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
             },
             child: const Text('Cancel'),
           ),
@@ -385,7 +376,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
                 _logger.info('Form validated, proceeding with student creation');
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 setState(() => _isLoading = true);
 
                 try {
@@ -405,47 +396,48 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
 
                   _logger.fine('User record created: ${userResponse.toString()}');
 
-                  if (userResponse != null) {
-                    _logger.fine('Creating student record');
-                    await supabase
-                        .from(AppConstants.tableStudents)
-                        .insert({
-                          'id': userResponse['id'],
-                          'student_id': _studentIdController.text,
-                          'department_id': _departmentController.text,
-                          'address': _addressController.text,
-                          'contact_info': {
-                            'phone': _phoneController.text,
-                          },
-                          'enrollment_date': DateTime.now().toIso8601String(),
-                          'academic_standing': _selectedAcademicStanding,
-                          'preferences': {},
-                        });
+                  _logger.fine('Creating student record');
+                  await supabase
+                      .from(AppConstants.tableStudents)
+                      .insert({
+                        'id': userResponse['id'],
+                        'student_id': _studentIdController.text,
+                        'department_id': _departmentController.text,
+                        'address': _addressController.text,
+                        'contact_info': {
+                          'phone': _phoneController.text,
+                        },
+                        'enrollment_date': DateTime.now().toIso8601String(),
+                        'academic_standing': _selectedAcademicStanding,
+                        'preferences': {},
+                      });
 
-                    _logger.info('Student created successfully');
-                    _loadStudents();
+                  _logger.info('Student created successfully');
+                  _loadStudents();
 
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Student added successfully'),
                         backgroundColor: Colors.green,
                       ),
                     );
-                  } else {
-                    _logger.warning('Failed to create user record');
-                    throw Exception('Failed to create user record');
                   }
                 } catch (e, stackTrace) {
                   _logger.severe('Error adding student', e, stackTrace);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to add student: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to add student: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
 
-                setState(() => _isLoading = false);
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
               } else {
                 _logger.warning('Form validation failed');
               }
@@ -482,8 +474,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
           title: const Text('Edit Student'),
           content: SingleChildScrollView(
             child: Form(
@@ -587,7 +579,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                     ],
                     onChanged: (value) {
                       if (value != null) {
-                        setState(() => _selectedStatus = value);
+                        setDialogState(() => _selectedStatus = value);
                       }
                     },
                     validator: (value) {
@@ -610,7 +602,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                     ],
                     onChanged: (value) {
                       if (value != null) {
-                        setState(() => _selectedAcademicStanding = value);
+                        setDialogState(() => _selectedAcademicStanding = value);
                       }
                     },
                     validator: (value) {
@@ -627,13 +619,13 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                     trailing: const Icon(Icons.calendar_today),
                     onTap: () async {
                       final DateTime? picked = await showDatePicker(
-                        context: context,
+                        context: dialogContext,
                         initialDate: _selectedEnrollmentDate,
                         firstDate: DateTime(2000),
                         lastDate: DateTime.now(),
                       );
                       if (picked != null && picked != _selectedEnrollmentDate) {
-                        setState(() {
+                        setDialogState(() {
                           _selectedEnrollmentDate = picked;
                         });
                       }
@@ -645,14 +637,14 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () async {
                 if (_formKey.currentState!.validate()) {
                   _logger.info('Form validated, proceeding with student update');
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                   if (!mounted) return;
                   setState(() => _isLoading = true);
 
@@ -675,40 +667,38 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                     
                     _logger.fine('User update response: $userUpdateResponse');
 
-                    if (userUpdateResponse != null) {
-                      // Update student data
-                      _logger.fine('Updating student data');
-                      final studentUpdateResponse = await supabase
-                          .from(AppConstants.tableStudents)
-                          .update({
-                            'student_id': _studentIdController.text.trim(),
-                            'department_id': _departmentController.text.trim(),
-                            'address': _addressController.text.trim(),
-                            'contact_info': {
-                              'phone': _phoneController.text.trim(),
-                            },
-                            'enrollment_date': _selectedEnrollmentDate.toIso8601String(),
-                            'academic_standing': _selectedAcademicStanding,
-                          })
-                          .eq('id', student['id'])
-                          .select()
-                          .single();
-                      
-                      _logger.fine('Student update response: $studentUpdateResponse');
+                    // Update student data
+                    _logger.fine('Updating student data');
+                    final studentUpdateResponse = await supabase
+                        .from(AppConstants.tableStudents)
+                        .update({
+                          'student_id': _studentIdController.text.trim(),
+                          'department_id': _departmentController.text.trim(),
+                          'address': _addressController.text.trim(),
+                          'contact_info': {
+                            'phone': _phoneController.text.trim(),
+                          },
+                          'enrollment_date': _selectedEnrollmentDate.toIso8601String(),
+                          'academic_standing': _selectedAcademicStanding,
+                        })
+                        .eq('id', student['id'])
+                        .select()
+                        .single();
+                    
+                    _logger.fine('Student update response: $studentUpdateResponse');
 
-                      _logger.info('Student updated successfully in database');
-                      await _loadStudents();
+                    _logger.info('Student updated successfully in database');
+                    await _loadStudents();
 
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Student updated successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Student updated successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
                     }
-                  } catch (e, stackTrace) {
+                                    } catch (e, stackTrace) {
                     _logger.severe('Error updating student', e, stackTrace);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -739,9 +729,10 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     _logger.info('Showing delete confirmation for student at index $index');
     final student = _filteredStudents[index];
     final studentData = student['students'] as Map<String, dynamic>?;
+    final currentContext = context;
 
     final bool? confirm = await showDialog<bool>(
-      context: context,
+      context: currentContext,
       builder: (context) => AlertDialog(
         title: const Text('Delete Student'),
         content: Text(
@@ -905,7 +896,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                                       ),
                                                     ),
                                                   ),
-                                                  _buildStatusChip(student['status'] ?? 'Unknown'),
+                                                  _buildStatusChip(student['status']?.toString() ?? 'Unknown'),
                                                 ],
                                               ),
                                               const SizedBox(height: 4),
@@ -953,26 +944,26 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                               children: [
                                                 _buildInfoRow(
                                                   'Student ID',
-                                                  studentData['student_id'] ?? 'Not assigned',
+                                                  studentData['student_id']?.toString() ?? 'Not assigned',
                                                   Icons.badge,
                                                 ),
                                                 const SizedBox(height: 8),
                                                 _buildInfoRow(
                                                   'Department',
-                                                  departmentData?['name'] ?? 'Not assigned',
+                                                  departmentData?['name']?.toString() ?? 'Not assigned',
                                                   Icons.business,
                                                 ),
                                                 const SizedBox(height: 8),
                                                 _buildInfoRow(
                                                   'Address',
-                                                  studentData['address'] ?? 'Not provided',
+                                                  studentData['address']?.toString() ?? 'Not provided',
                                                   Icons.location_on,
                                                 ),
                                                 if (contactInfo != null) ...[
                                                   const SizedBox(height: 8),
                                                   _buildInfoRow(
                                                     'Phone',
-                                                    contactInfo['phone'] ?? 'Not provided',
+                                                    contactInfo['phone']?.toString() ?? 'Not provided',
                                                     Icons.phone,
                                                   ),
                                                 ],
@@ -986,21 +977,21 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                               children: [
                                                 _buildInfoRow(
                                                   'Academic Standing',
-                                                  studentData['academic_standing'] ?? 'Unknown',
+                                                  studentData['academic_standing']?.toString() ?? 'Unknown',
                                                   Icons.school,
-                                                  color: _getAcademicStandingColor(studentData['academic_standing']),
+                                                  color: _getAcademicStandingColor(studentData['academic_standing']?.toString() ?? 'Unknown'),
                                                 ),
                                                 const SizedBox(height: 8),
                                                 _buildInfoRow(
                                                   'Enrollment Date',
-                                                  _formatDate(studentData['enrollment_date']),
+                                                  _formatDate(studentData['enrollment_date']?.toString()),
                                                   Icons.calendar_today,
                                                 ),
                                                 if (studentData['preferences'] != null) ...[
                                                   const SizedBox(height: 8),
                                                   _buildInfoRow(
                                                     'Preferences',
-                                                    _formatPreferences(studentData['preferences']),
+                                                    _formatPreferences(studentData['preferences'] as Map<String, dynamic>),
                                                     Icons.settings,
                                                   ),
                                                 ],
@@ -1064,7 +1055,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _getStatusColor(status).withOpacity(0.1),
+        color: _getStatusColor(status).withAlpha(26),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _getStatusColor(status)),
       ),
@@ -1092,8 +1083,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     }
   }
 
-  Color _getAcademicStandingColor(String? standing) {
-    switch (standing?.toLowerCase()) {
+  Color _getAcademicStandingColor(String standing) {
+    switch (standing.toLowerCase()) {
       case 'good':
         return Colors.green;
       case 'warning':
@@ -1106,7 +1097,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   }
 
   String _formatDate(String? dateString) {
-    if (dateString == null) return 'Not available';
+    if (dateString == null || dateString.isEmpty) return 'Not available';
     try {
       final date = DateTime.parse(dateString);
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -1116,8 +1107,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     }
   }
 
-  String _formatPreferences(Map<String, dynamic> preferences) {
-    if (preferences.isEmpty) return 'No preferences set';
+  String _formatPreferences(Map<String, dynamic>? preferences) {
+    if (preferences == null || preferences.isEmpty) return 'No preferences set';
     return preferences.entries
         .map((e) => '${e.key}: ${e.value}')
         .join(', ');

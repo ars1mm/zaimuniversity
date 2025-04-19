@@ -38,11 +38,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success) {
-        if (!context.mounted) return;
+        if (!mounted) return;
 
         // Check user role and navigate accordingly
         final userRole = await _authService.getUserRole();
-        if (!context.mounted) return;
+        if (!mounted) return;
 
         if (userRole == AppConstants.roleAdmin) {
           // Navigate to admin dashboard
@@ -55,10 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
           // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
         }
       } else {
-        if (!context.mounted) return;
+        if (!mounted) return;
         _showErrorSnackBar('Invalid email or password');
       }
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackBar('An error occurred. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);

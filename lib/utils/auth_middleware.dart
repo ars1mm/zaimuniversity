@@ -4,29 +4,28 @@ import '../services/logger_service.dart';
 
 class AuthMiddleware {
   static final AuthService _authService = AuthService();
+  static final _logger = LoggerService();
   static const String _tag = 'AuthMiddleware';
 
   /// Checks if the current user has admin access
   /// Returns true if the user is logged in and has admin role
   static Future<bool> isAdmin(BuildContext context) async {
-    LoggerService.debug(_tag, 'Checking admin access');
-    final hasAccess = await _authService.isAdmin(); // Using the correct method
+    _logger.debug('Checking admin access', tag: _tag);
+    final hasAccess = await _authService.isAdmin();
 
     // Only proceed with context operations if access is denied and context is still mounted
-    if (!hasAccess) {
-      LoggerService.warning(_tag, 'Unauthorized admin access attempt');
-      if (context.mounted) {
-        // Show unauthorized access message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unauthorized access. Admin privileges required.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    if (!hasAccess && context.mounted) {
+      _logger.warning('Unauthorized admin access attempt', tag: _tag);
+      // Show unauthorized access message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unauthorized access. Admin privileges required.'),
+          backgroundColor: Colors.red,
+        ),
+      );
 
-        // Navigate back or to login page
-        Navigator.of(context).pop();
-      }
+      // Navigate back or to login page
+      Navigator.of(context).pop();
     }
 
     return hasAccess;

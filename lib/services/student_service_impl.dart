@@ -207,7 +207,7 @@ class StudentServiceImpl extends BaseService {
         'message': 'Student updated successfully',
       };
     } catch (e) {
-      LoggerService.error(_tag, 'Failed to update student with ID: $userId', e);
+      LoggerService.error('Failed to update student with ID: $userId',_tag);
       return {
         'success': false,
         'message': 'Failed to update student: ${e.toString()}',

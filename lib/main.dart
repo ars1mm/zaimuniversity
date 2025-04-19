@@ -9,7 +9,10 @@ import 'screens/course_management_screen.dart';
 import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
 import 'screens/teacher_management_screen.dart';
-import 'services/logger_service.dart';
+import 'screens/create_course_screen.dart';
+import 'screens/manage_courses_screen.dart';
+import 'screens/assign_supervisor_screen.dart';
+import 'screens/create_department_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,12 +80,17 @@ class CampusInfoSystemApp extends StatelessWidget {
         '/': (context) => const LoginScreen(),
         '/login': (context) => const LoginScreen(),
         '/admin': (context) => const AdminDashboard(),
+        '/admin_dashboard': (context) => const AdminDashboard(),
         '/add_student': (context) => const AddStudentScreen(),
         '/manage_courses': (context) => const CourseManagementScreen(),
-        DepartmentManagementScreen.routeName: (context) => const DepartmentManagementScreen(),
+        '/create_course': (context) => const CreateCourseScreen(),
+        '/manage_teachers': (context) => const TeacherManagementScreen(),
+        '/manage_departments': (context) => const DepartmentManagementScreen(),
+        '/assign_supervisor': (context) => const AssignSupervisorScreen(),
+        '/create_department': (context) => const CreateDepartmentScreen(),
+        StudentManagementScreen.routeName: (context) => const StudentManagementScreen(),
         TeacherManagementScreen.routeName: (context) => const TeacherManagementScreen(),
-        StudentManagementScreen.routeName: (context) =>
-            const StudentManagementScreen(),
+        DepartmentManagementScreen.routeName: (context) => const DepartmentManagementScreen(),
       },
     );
   }
