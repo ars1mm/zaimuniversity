@@ -6,7 +6,7 @@ import 'screens/login_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/add_student_screen.dart';
 import 'screens/course_management_screen.dart';
-import 'screens/student_management_screen.dart';
+// import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
 import 'screens/teacher_management_screen.dart';
 import 'screens/create_course_screen.dart';
