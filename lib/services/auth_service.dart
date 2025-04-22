@@ -1,68 +1,130 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../constants/app_constants.dart';
-import '../models/user.dart';
+// ignore: unused_import
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import '../main.dart';
+import 'logger_service.dart';
+import 'supabase_service.dart';
+import 'base_service.dart';
 
-class AuthService {
-  Future<bool> login(String email, String password) async {
+/// AuthService handles all authentication-related operations
+class AuthService extends BaseService {
+  final SupabaseService _supabaseService = SupabaseService();
+  final _logger = LoggerService();
+  static const String _tag = 'AuthService';
+
+  /// Gets the user's role from the database
+  Future<String?> getUserRole() async {
     try {
-      final response = await http.post(
-        Uri.parse(AppConstants.loginEndpoint),
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['token'];
-        final user = User.fromJson(data['user']);
-
-        // Store auth data
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(AppConstants.tokenKey, token);
-        await prefs.setString(AppConstants.userIdKey, user.id);
-        await prefs.setString(AppConstants.userRoleKey, user.role);
-
-        return true;
+      final user = await getCurrentUser();
+      if (user == null) {
+        _logger.warning('No authenticated user found', tag: _tag);
+        return null;
       }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<bool> logout() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConstants.tokenKey);
-      await prefs.remove(AppConstants.userIdKey);
-      await prefs.remove(AppConstants.userRoleKey);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<bool> isLoggedIn() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.tokenKey);
-      return token != null;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<String?> getToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(AppConstants.tokenKey);
-    } catch (e) {
+      return user['role'] as String?;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting user role', tag: _tag, error: e, stackTrace: stackTrace);
       return null;
     }
+  }
+
+  /// Checks if a user is currently logged in
+  Future<bool> isLoggedIn() async {
+    try {
+      _logger.info('Checking if user is logged in', tag: _tag);
+      final currentUser = await getCurrentUser();
+      return currentUser != null;
+    } catch (e) {
+      _logger.error('Error checking login status', tag: _tag, error: e);
+      return false;
+    }
+  }
+
+  /// Gets the current user's data
+  Future<Map<String, dynamic>?> getCurrentUser() async {
+    try {
+      final user = auth.currentUser;
+      if (user == null) {
+        _logger.warning('No user is currently logged in', tag: _tag);
+        return null;
+      }
+
+      final userData = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
+
+      _logger.info('Retrieved current user data', tag: _tag);
+      return userData;
+    } catch (e, stackTrace) {
+      _logger.error('Error getting current user', tag: _tag, error: e, stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  /// Logs in a user with email and password
+  Future<bool> login(String email, String password) async {
+    try {
+      _logger.info('Attempting login for user: $email', tag: _tag);
+
+      final response = await auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user == null) {
+        _logger.warning('Login failed - no user returned', tag: _tag);
+        return false;
+      }
+
+      _logger.info('User logged in successfully', tag: _tag);
+      return true;
+    } catch (e, stackTrace) {
+      _logger.error('Login error', tag: _tag, error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Logs out the current user
+  Future<bool> logout() async {
+    try {
+      _logger.debug('Attempting to log out user', tag: _tag);
+      await auth.signOut();
+      _logger.debug('User logged out successfully', tag: _tag);
+      return true;
+    } catch (e, stackTrace) {
+      _logger.error('Error during logout', tag: _tag, error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Checks if the current user has admin role
+  Future<bool> isAdmin() async {
+    try {
+      _logger.debug('Checking if user has admin role', tag: _tag);
+      final user = await getCurrentUser();
+      if (user == null) {
+        _logger.debug('No user found when checking admin role', tag: _tag);
+        return false;
+      }
+
+      final role = user['role'];
+      _logger.debug('User role: $role', tag: _tag);
+      return role == 'admin';
+    } catch (e, stackTrace) {
+      _logger.error('Error checking admin role', tag: _tag, error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  Future<bool> isTeacher() async {
+    return await _supabaseService.isTeacher();
+  }
+
+  Future<bool> isSupervisor() async {
+    return await _supabaseService.isSupervisor();
+  }
+
+  Future<bool> isStudent() async {
+    return await _supabaseService.isStudent();
   }
 }

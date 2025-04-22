@@ -20,7 +20,7 @@ To set up the project locally, follow these steps:
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-repo/zaimuniversity.git
+    git clone https://github.com/ars1mm/zaimuniversity.git
     ```
 2. Navigate to the project directory:
     ```bash
@@ -41,7 +41,24 @@ To run the tests, use the following command:
 ```bash
 flutter test
 ```
+## Environment variables for zaimuniversity app
+### Environment Variables
 
+To configure the application, create a `.env` file in the project root with the following variables:
+
+```
+# API endpoints
+API_URL=your_api_url_here
+
+# Supabase configuration
+SUPABASE_URL=YOUR_SUPABASE_URL_HERE
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Other configuration
+APP_DEBUG=true
+```
+
+> **Note**: Never commit sensitive keys to public repositories. The above values are placeholders and should be replaced with your actual configuration values.
 ### Troubleshooting
 
 If you encounter any issues, consider the following steps:

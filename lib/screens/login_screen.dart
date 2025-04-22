@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../constants/app_constants.dart';
+import 'admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,15 +38,26 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
 
-      if (success) {
-        if (!context.mounted) return;
-        // Navigate to home screen
-        // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
-      } else {
-        if (!context.mounted) return;
+      if (success && mounted) {
+        // Check user role and navigate accordingly
+        final userRole = await _authService.getUserRole();
+        if (!mounted) return;
+
+        if (userRole == AppConstants.roleAdmin) {
+          // Navigate to admin dashboard
+          _showRoleBasedSnackBar('Logged in as Administrator', Colors.green);
+          Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const AdminDashboard()));
+        } else {
+          // Navigate to student/regular user dashboard
+          _showRoleBasedSnackBar('Login successful', Colors.green);
+          // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
+        }
+      } else if (mounted) {
         _showErrorSnackBar('Invalid email or password');
       }
     } catch (e) {
+      if (!mounted) return;
       _showErrorSnackBar('An error occurred. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -56,6 +69,15 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showRoleBasedSnackBar(String message, Color backgroundColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
       ),
     );
   }
@@ -75,10 +97,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // University Logo
-                  Image.network(
-                    'https://www.izu.edu.tr/images/default-source/logo-galeri/1.jpg?sfvrsn=18698650_2',
+                  SvgPicture.asset(
+                    'assets/images/412431.svg',
                     height: 100,
                     fit: BoxFit.contain,
+                    placeholderBuilder: (context) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
                   const SizedBox(height: 24),
 

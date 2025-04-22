@@ -1,11 +1,11 @@
 {
-    "name": "click_counter",
-    "short_name": "click_counter",
+    "name": "Campus Information System",
+    "short_name": "Campus Info",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Campus Information System.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
