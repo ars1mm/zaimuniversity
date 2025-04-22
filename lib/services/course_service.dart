@@ -1,7 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
-import '../constants/app_constants.dart';
-import '../main.dart';
 import 'auth_service.dart';
 
 class CourseService {

@@ -1,9 +1,6 @@
 // ignore: unused_import
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../constants/app_constants.dart';
 import '../main.dart';
-import '../models/user.dart';
 import 'logger_service.dart';
 import 'supabase_service.dart';
 import 'base_service.dart';

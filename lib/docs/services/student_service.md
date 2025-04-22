@@ -1,95 +1,58 @@
-# Student Service Documentation
+# StudentService Documentation
 
 ## Overview
 **File:** `lib/services/student_service.dart`
 
-The StudentService is an abstract class that defines the contract for student management operations. It extends the UserService to provide additional functionality specific to student profiles, including academic information, enrollment status, and student-specific preferences.
+The StudentService class handles all student-related operations in the application, including adding new students, generating default passwords, and retrieving student records. It implements role-based access control to ensure only authorized users can perform these operations.
 
 ## Dependencies
-- `user_service.dart`: Inherits user management functionality
-- `models/student.dart`: Student model for type safety
-- `models/academic_record.dart`: Academic record model
-- `models/enrollment.dart`: Enrollment model
+- `../constants/app_constants.dart`: For application constants
+- `../main.dart`: For global Supabase instance
+- `../models/user.dart`: For User model
+- `auth_service.dart`: For authentication and authorization
+- `logger_service.dart`: For logging operations
+- `supabase_service.dart`: For underlying Supabase operations
 
 ## Core Functionality
 
 ### Methods
 
-#### Student Profile Operations
+#### addStudent
 ```dart
-Future<Student> createStudent(Student student)
-Future<Student?> getStudentById(String studentId)
-Future<Student> updateStudent(Student student)
-Future<void> deleteStudent(String studentId)
+Future<Map<String, dynamic>> addStudent({
+  required String name,
+  required String email,
+  required String studentId,
+  required String department,
+  required int enrollmentYear,
+  String? password,
+})
 ```
-- CRUD operations for student profiles
-- Extends user profile functionality
-- Manages student-specific data
-- Ensures data integrity
+- Adds a new student to the system (admin only)
+- Performs several steps:
+  1. Verifies admin privileges
+  2. Creates auth account with email and password (default if not provided)
+  3. Creates user record with student role
+  4. Finds or creates department
+  5. Adds student details with enrollment information
+- Returns a response map with success status, message, and data
+- Includes comprehensive logging throughout the process
 
-#### Academic Records
+#### generateDefaultPassword
 ```dart
-Future<AcademicRecord> getAcademicRecord(String studentId)
-Future<AcademicRecord> updateAcademicRecord(String studentId, AcademicRecord record)
-Future<List<Course>> getEnrolledCourses(String studentId)
+String generateDefaultPassword(String studentId)
 ```
-- Manages academic performance data
-- Tracks course enrollments
-- Handles grade information
-- Maintains academic history
+- Generates a default password for new students based on their student ID
+- Uses a pattern of 'IZU' + first 4 characters of student ID + '!'
+- Logs the password generation (but not the password itself)
 
-#### Enrollment Management
+#### getAllStudents
 ```dart
-Future<void> enrollInCourse(String studentId, String courseId)
-Future<void> withdrawFromCourse(String studentId, String courseId)
-Future<List<Enrollment>> getEnrollmentHistory(String studentId)
+Future<Map<String, dynamic>> getAllStudents()
 ```
-- Handles course enrollment
-- Manages withdrawal requests
-- Tracks enrollment history
-- Validates enrollment eligibility
-
-#### Student Search
-```dart
-Future<List<Student>> searchStudents(String query)
-Future<List<Student>> getStudentsByProgram(String programId)
-Future<List<Student>> getStudentsByYear(int year)
-```
-- Searches students by various criteria
-- Filters by program and year
-- Implements pagination
-- Handles search parameters
-
-## Error Handling
-- Provides detailed error messages
-- Handles database errors
-- Manages validation failures
-- Logs errors through LoggerService
-
-## Security Considerations
-- Implements role-based access control
-- Validates student permissions
-- Sanitizes student input
-- Protects sensitive academic data
-
-## Database Schema Compliance
-- Follows Students table schema
-- Maintains referential integrity with Users table
-- Handles timestamps correctly
-- Manages soft deletes
-- Respects foreign key constraints
-
-## Usage Example
-```dart
-final studentService = StudentServiceImpl();
-try {
-  final student = await studentService.getStudentById('student123');
-  if (student != null) {
-    await studentService.enrollInCourse('student123', 'course456');
-    final academicRecord = await studentService.getAcademicRecord('student123');
-    // Handle successful operations
-  }
-} catch (e) {
-  // Handle error
-}
-``` 
+- Retrieves a list of all students in the system (admin only)
+- Verifies admin privileges
+- Delegates to SupabaseService for database operations
+- Processes student data to combine with user data
+- Returns a response map with success status, message, and list of User objects
+- Includes logging for the operation and any errors

@@ -1,52 +1,36 @@
-# Base Service Documentation
+# BaseService Documentation
 
 ## Overview
 **File:** `lib/services/base_service.dart`
 
-The BaseService is an abstract class that serves as the foundation for all service classes in the application. It provides common functionality and shared resources that other services can utilize.
+The BaseService is an abstract class that provides common functionality and resources for all service classes in the application. It maintains a central instance of the Supabase client and logging mechanisms to ensure consistent behavior across services.
 
 ## Dependencies
-- `supabase_flutter`: For database and authentication operations
-- `app_constants.dart`: Application-wide constants
-- `logger_service.dart`: Logging functionality
+- `supabase_flutter`: For Supabase client functionality
+- `logging`: For logging operations
 
 ## Core Functionality
 
-### Fields
-- `supabase`: SupabaseClient instance for database operations
-- `auth`: GoTrueClient instance for authentication operations
+### Properties
+- `_logger`: A Logger instance for internal service logging
+- `supabase`: The main SupabaseClient instance shared across all services
+- `auth`: The GoTrueClient instance for authentication operations
 
 ### Methods
 
-#### Email Validation
+#### isValidEmail
 ```dart
 bool isValidEmail(String email)
 ```
-- Validates email format using regex
-- Returns true if email is valid, false otherwise
-- Used across services for user input validation
+- Validates if an email string meets Supabase's basic requirements
+- Checks if email is not empty and contains the '@' symbol
+- Returns a boolean indicating if the email is valid
 
-#### User Verification
+#### verifyUserExists
 ```dart
 Future<bool> verifyUserExists(String userId)
 ```
-- Checks if a user exists in the database
-- Returns true if user exists, false otherwise
-- Used for authorization checks
-
-## Usage
-All service classes should extend BaseService to inherit:
-- Database connection handling
-- Authentication client access
-- Common utility methods
-- Error handling patterns
-
-## Error Handling
-- Implements standard error catching
-- Logs errors through LoggerService
-- Provides consistent error response format
-
-## Security Considerations
-- Validates all input data
-- Implements proper error handling
-- Maintains secure connection handling 
+- Verifies if a user with the given userId exists in the database
+- Queries the 'users' table with the provided userId
+- Returns true if the user exists, false otherwise
+- Logs any errors during verification

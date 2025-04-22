@@ -1,91 +1,63 @@
-# User Service Documentation
+# UserService Documentation
 
 ## Overview
 **File:** `lib/services/user_service.dart`
 
-The UserService is an abstract class that defines the contract for user management operations. It provides methods for creating, reading, updating, and deleting user profiles, as well as managing user preferences and settings.
+The UserService extends BaseService and handles all user-related database operations. It provides methods for creating, updating, retrieving, and deleting user records in the application's database.
 
 ## Dependencies
-- `base_service.dart`: Inherits common functionality
-- `models/user.dart`: User model for type safety
-- `models/user_preferences.dart`: User preferences model
+- `../constants/app_constants.dart`: For database table names
+- `base_service.dart`: For inherited base functionality
+- `logger_service.dart`: For logging operations
 
 ## Core Functionality
 
 ### Methods
 
-#### User Profile Operations
+#### createUser
 ```dart
-Future<User> createUser(User user)
-Future<User?> getUserById(String userId)
-Future<User> updateUser(User user)
-Future<void> deleteUser(String userId)
+Future<Map<String, dynamic>> createUser({
+  required String email,
+  required String fullName,
+  required String role,
+  required String userId,
+  String status = 'active',
+})
 ```
-- CRUD operations for user profiles
-- Handles data validation
-- Manages user metadata
-- Ensures data integrity
+- Creates a new user record in the database
+- Takes email, fullName, role, userId, and optional status parameters
+- Sets creation and update timestamps automatically
+- Returns a response map with success status, message, and user data
+- Logs the creation process and any errors
 
-#### User Preferences
+#### updateUser
 ```dart
-Future<UserPreferences> getUserPreferences(String userId)
-Future<UserPreferences> updateUserPreferences(String userId, UserPreferences preferences)
+Future<Map<String, dynamic>> updateUser({
+  required String userId,
+  String? email,
+  String? fullName,
+  String? role,
+  String? status,
+})
 ```
-- Manages user preferences
-- Handles preference updates
-- Stores settings in JSON format
-- Validates preference data
+- Updates an existing user record with the specified fields
+- Requires userId and accepts optional parameters for fields to update
+- Updates timestamp automatically
+- Returns a response map with success status and message
+- Logs the update process and any errors
 
-#### Profile Management
+#### getUserById
 ```dart
-Future<void> updateProfile(String userId, Map<String, dynamic> updates)
-Future<void> updateAvatar(String userId, String avatarUrl)
+Future<Map<String, dynamic>> getUserById(String userId)
 ```
-- Updates user profile information
-- Manages profile pictures
-- Handles profile metadata
-- Validates profile data
+- Retrieves a user record by their unique ID
+- Returns a response map with success status, message, and user data
+- Logs the retrieval process and any errors
 
-#### User Search
+#### deleteUser
 ```dart
-Future<List<User>> searchUsers(String query)
-Future<List<User>> getUsersByRole(String role)
+Future<Map<String, dynamic>> deleteUser(String userId)
 ```
-- Searches users by various criteria
-- Filters users by role
-- Implements pagination
-- Handles search parameters
-
-## Error Handling
-- Provides detailed error messages
-- Handles database errors
-- Manages validation failures
-- Logs errors through LoggerService
-
-## Security Considerations
-- Implements role-based access control
-- Validates user permissions
-- Sanitizes user input
-- Protects sensitive data
-
-## Database Schema Compliance
-- Follows Users table schema
-- Maintains referential integrity
-- Handles timestamps correctly
-- Manages soft deletes
-
-## Usage Example
-```dart
-final userService = UserServiceImpl();
-try {
-  final user = await userService.getUserById('user123');
-  if (user != null) {
-    final updatedUser = await userService.updateUser(
-      user.copyWith(firstName: 'New Name')
-    );
-    // Handle successful update
-  }
-} catch (e) {
-  // Handle error
-}
-``` 
+- Deletes a user record by their unique ID
+- Returns a response map with success status and message
+- Logs the deletion process and any errors

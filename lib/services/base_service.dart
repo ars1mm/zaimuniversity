@@ -1,7 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../constants/app_constants.dart';
 import 'package:logging/logging.dart';
-import '../main.dart';
 
 /// BaseService provides common functionality and resources for all service classes.
 /// It maintains a central instance of the Supabase client and logging mechanisms.
