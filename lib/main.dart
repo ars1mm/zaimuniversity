@@ -6,7 +6,7 @@ import 'screens/login_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/add_student_screen.dart';
 import 'screens/course_management_screen.dart';
-// import 'screens/student_management_screen.dart';
+import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
 import 'screens/teacher_management_screen.dart';
 import 'screens/create_course_screen.dart';
@@ -76,8 +76,7 @@ class CampusInfoSystemApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      routes: {
+      initialRoute: '/',      routes: {
         '/': (context) => const LoginScreen(),
         '/login': (context) => const LoginScreen(),
         '/admin': (context) => const AdminDashboard(),
@@ -87,6 +86,7 @@ class CampusInfoSystemApp extends StatelessWidget {
         '/create_course': (context) => const CreateCourseScreen(),
         '/manage_teachers': (context) => const TeacherManagementScreen(),
         '/manage_departments': (context) => const DepartmentManagementScreen(),
+        '/manage_students': (context) => const StudentManagementScreen(),
         '/assign_supervisor': (context) => const AssignSupervisorScreen(),
         '/create_department': (context) => const CreateDepartmentScreen(),
       },
