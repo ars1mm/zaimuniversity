@@ -17,15 +17,12 @@ class CourseService {
       if (!isAdmin) {
         _logger.warning('Unauthorized attempt to fetch all courses');
         throw Exception('Unauthorized: Admin privileges required');
-      }
-
-      // Fetch courses from Supabase with proper join
+      }      // Fetch courses from Supabase with proper join
       final response = await _supabase
           .from('courses')
           .select('''
             *,
-            departments (name),
-            users!instructor_id (name)
+            departments (name)
           ''')
           .order('title');
 

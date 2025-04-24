@@ -430,13 +430,11 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                 if (!mounted) return;
                 
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
-                setState(() => _isLoading = true);
-
-                final result = await _courseService.updateCourse(
+                setState(() => _isLoading = true);                final result = await _courseService.updateCourse(
                   id: course['id'],
                   title: _courseNameController.text,
                   capacity: int.parse(_creditController.text),
-                  department: _selectedDepartmentId,
+                  department: _departmentController.text,
                   description: _descriptionController.text,
                   semester: _courseCodeController.text,
                   status: selectedStatus,
@@ -626,18 +624,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                         _searchQuery = value;
                       });
                     },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                FilledButton.icon(
-                  onPressed: _showSearchCourseDialog,
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit Course'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+                  ),                ),
                 const SizedBox(width: 16),
                 FilledButton.icon(
                   onPressed: _showAddCourseDialog,
@@ -692,12 +679,22 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                                       ),
                                   ],
                                 ),
-                                isThreeLine: true,
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => _confirmDeleteCourse(index),
-                                  color: Colors.red,
-                                  tooltip: 'Delete Course',
+                                isThreeLine: true,                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () => _showEditCourseDialog(index),
+                                      color: Colors.blue,
+                                      tooltip: 'Edit Course',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => _confirmDeleteCourse(index),
+                                      color: Colors.red,
+                                      tooltip: 'Delete Course',
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
