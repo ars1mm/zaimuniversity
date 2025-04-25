@@ -10,10 +10,11 @@ import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
 import 'screens/teacher_management_screen.dart';
 import 'screens/create_course_screen.dart';
-// import 'screens/manage_courses_screen.dart';
 import 'screens/assign_supervisor_screen.dart';
 import 'screens/create_department_screen.dart';
+import 'screens/profile_screen.dart';
 import './services/logger_service.dart';
+import './utils/route_guard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,9 +41,12 @@ Future<void> main() async {
   final supabaseUrl = dotenv.env['SUPABASE_URL'];
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
 
-  if (supabaseUrl == null || supabaseUrl.isEmpty || 
-      supabaseAnonKey == null || supabaseAnonKey.isEmpty) {
-    logger.severe('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+  if (supabaseUrl == null ||
+      supabaseUrl.isEmpty ||
+      supabaseAnonKey == null ||
+      supabaseAnonKey.isEmpty) {
+    logger.severe(
+        'Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
     return;
   }
 
@@ -63,6 +67,7 @@ Future<void> main() async {
 
 // Provide global access to Supabase client
 final supabase = Supabase.instance.client;
+final auth = supabase.auth;
 
 class CampusInfoSystemApp extends StatelessWidget {
   const CampusInfoSystemApp({super.key});
@@ -76,19 +81,198 @@ class CampusInfoSystemApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',      routes: {
-        '/': (context) => const LoginScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/admin': (context) => const AdminDashboard(),
-        '/admin_dashboard': (context) => const AdminDashboard(),
-        '/add_student': (context) => const AddStudentScreen(),
-        '/manage_courses': (context) => const CourseManagementScreen(),
-        '/create_course': (context) => const CreateCourseScreen(),
-        '/manage_teachers': (context) => const TeacherManagementScreen(),
-        '/manage_departments': (context) => const DepartmentManagementScreen(),
-        '/manage_students': (context) => const StudentManagementScreen(),
-        '/assign_supervisor': (context) => const AssignSupervisorScreen(),
-        '/create_department': (context) => const CreateDepartmentScreen(),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        // Use RouteSettings to pass data to screens if needed
+        switch (settings.name) {
+          case '/':
+          case '/login':
+            return MaterialPageRoute(builder: (_) => const LoginScreen());
+
+          // Admin-only routes
+          case '/admin':
+          case '/admin_dashboard':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const AdminDashboard(),
+                  allowedRoles: ['admin'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/add_student':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const AddStudentScreen(),
+                  allowedRoles: ['admin', 'supervisor'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/manage_courses':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const CourseManagementScreen(),
+                  allowedRoles: ['admin', 'supervisor', 'teacher'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/create_course':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const CreateCourseScreen(),
+                  allowedRoles: ['admin', 'supervisor', 'teacher'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/manage_teachers':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const TeacherManagementScreen(),
+                  allowedRoles: ['admin', 'supervisor'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/manage_departments':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const DepartmentManagementScreen(),
+                  allowedRoles: ['admin'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/manage_students':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const StudentManagementScreen(),
+                  allowedRoles: ['admin', 'supervisor'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/assign_supervisor':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const AssignSupervisorScreen(),
+                  allowedRoles: ['admin'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+          case '/create_department':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const CreateDepartmentScreen(),
+                  allowedRoles: ['admin'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/profile':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const ProfileScreen(),
+                  allowedRoles: ['admin', 'supervisor', 'teacher', 'student'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          default:
+            return MaterialPageRoute(builder: (_) => const LoginScreen());
+        }
       },
     );
   }

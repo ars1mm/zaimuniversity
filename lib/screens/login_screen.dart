@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../constants/app_constants.dart';
-import 'admin_dashboard.dart';
+import 'role_based_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,22 +37,19 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
       );
-
       if (success && mounted) {
         // Check user role and navigate accordingly
         final userRole = await _authService.getUserRole();
         if (!mounted) return;
 
-        if (userRole == AppConstants.roleAdmin) {
-          // Navigate to admin dashboard
-          _showRoleBasedSnackBar('Logged in as Administrator', Colors.green);
-          Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const AdminDashboard()));
-        } else {
-          // Navigate to student/regular user dashboard
-          _showRoleBasedSnackBar('Login successful', Colors.green);
-          // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomeScreen()));
-        }
+        // Show appropriate welcome message based on role
+        _showRoleBasedSnackBar(
+            'Login successful: ${userRole ?? 'Unknown'} role', Colors.green);
+
+        // Pass the user role to our role-based dashboard
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+            builder: (_) =>
+                RoleBasedDashboard(userRole: userRole ?? 'student')));
       } else if (mounted) {
         _showErrorSnackBar('Invalid email or password');
       }

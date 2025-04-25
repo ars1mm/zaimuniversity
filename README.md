@@ -51,6 +51,11 @@ To configure the application, create a `.env` file in the project root with the 
 API_URL=your_api_url_here
 
 # Supabase configuration
+SUPABASE_URL=your_supabase_url_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_STORAGE_URL=your_supabase_storage_url_here
+
+# Supabase configuration
 SUPABASE_URL=YOUR_SUPABASE_URL_HERE
 SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
