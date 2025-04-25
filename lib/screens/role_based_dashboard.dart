@@ -107,6 +107,12 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'route': '/assign_supervisor',
           },
           {
+            'title': 'Manage User Profiles',
+            'icon': Icons.people,
+            'color': Colors.amber.shade700,
+            'route': '/manage_user_profiles',
+          },
+          {
             'title': 'My Profile',
             'icon': Icons.account_circle,
             'color': Colors.red.shade800,
@@ -265,19 +271,17 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
                 ],
               ),
             ),
-            ...menuItems
-                .map((item) => ListTile(
-                      leading: Icon(
-                        item['icon'] as IconData,
-                        color: item['color'] as Color,
-                      ),
-                      title: Text(item['title'] as String),
-                      onTap: () {
-                        Navigator.pop(context); // Close drawer
-                        Navigator.pushNamed(context, item['route'] as String);
-                      },
-                    ))
-                ,
+            ...menuItems.map((item) => ListTile(
+                  leading: Icon(
+                    item['icon'] as IconData,
+                    color: item['color'] as Color,
+                  ),
+                  title: Text(item['title'] as String),
+                  onTap: () {
+                    Navigator.pop(context); // Close drawer
+                    Navigator.pushNamed(context, item['route'] as String);
+                  },
+                )),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),

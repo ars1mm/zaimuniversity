@@ -13,6 +13,7 @@ import 'screens/create_course_screen.dart';
 import 'screens/assign_supervisor_screen.dart';
 import 'screens/create_department_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/user_profile_management_screen.dart';
 import './services/logger_service.dart';
 import './utils/route_guard.dart';
 
@@ -251,7 +252,6 @@ class CampusInfoSystemApp extends StatelessWidget {
                 },
               ),
             );
-
           case '/profile':
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
@@ -259,6 +259,24 @@ class CampusInfoSystemApp extends StatelessWidget {
                   context: context,
                   targetWidget: const ProfileScreen(),
                   allowedRoles: ['admin', 'supervisor', 'teacher', 'student'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/manage_user_profiles':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const UserProfileManagementScreen(),
+                  allowedRoles: ['admin'],
                 ),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
