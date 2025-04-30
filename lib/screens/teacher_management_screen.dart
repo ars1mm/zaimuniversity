@@ -1,7 +1,9 @@
+// filepath: c:\Users\Windows 10 PRO\Desktop\Fakulltet\Instanbul\Mobile Applications\project\zaimuniversity\lib\screens\teacher_management_screen.dart
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'package:logging/logging.dart';
+import 'add_teacher_screen.dart';
 
 class TeacherManagementScreen extends StatefulWidget {
   static const String routeName = '/manage_teachers';
@@ -9,7 +11,8 @@ class TeacherManagementScreen extends StatefulWidget {
   const TeacherManagementScreen({super.key});
 
   @override
-  State<TeacherManagementScreen> createState() => _TeacherManagementScreenState();
+  State<TeacherManagementScreen> createState() =>
+      _TeacherManagementScreenState();
 }
 
 class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
@@ -97,205 +100,25 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
 
     final query = _searchQuery.toLowerCase();
     return _teachers.where((teacher) {
-      return teacher['users']['full_name'].toString().toLowerCase().contains(query) ||
+      return teacher['users']['full_name']
+              .toString()
+              .toLowerCase()
+              .contains(query) ||
           teacher['users']['email'].toString().toLowerCase().contains(query) ||
           teacher['specialization'].toString().toLowerCase().contains(query);
     }).toList();
   }
 
-  Future<void> _showAddTeacherDialog() async {
-    _nameController.clear();
-    _emailController.clear();
-    _specializationController.clear();
-    _bioController.clear();
-    _departmentController.clear();
-    _selectedStatus = 'active';
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Teacher'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    hintText: 'Enter teacher\'s full name',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter teacher\'s email',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _specializationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Specialization',
-                    hintText: 'Enter teacher\'s specialization',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a specialization';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _bioController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bio',
-                    hintText: 'Enter teacher\'s bio',
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Department',
-                  ),
-                  items: _departments.map((department) {
-                    return DropdownMenuItem<String>(
-                      value: department['id'].toString(),
-                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    _departmentController.text = value ?? '';
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a department';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                  ),
-                  value: _selectedStatus,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'active',
-                      child: Text('Active'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'on_leave',
-                      child: Text('On Leave'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'retired',
-                      child: Text('Retired'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedStatus = value;
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (_formKey.currentState!.validate()) {
-                Navigator.of(context).pop();
-                setState(() => _isLoading = true);
-
-                try {
-                  // First create the user record
-                  final userResponse = await supabase
-                      .from(AppConstants.tableUsers)
-                      .insert({
-                        'email': _emailController.text,
-                        'full_name': _nameController.text,
-                        'role': 'teacher',
-                        'status': 'active',
-                        'created_at': DateTime.now().toIso8601String(),
-                        'updated_at': DateTime.now().toIso8601String(),
-                      })
-                      .select()
-                      .single();
-
-                  // Then create the teacher record with the user's ID
-                  await supabase
-                      .from(AppConstants.tableTeachers)
-                      .insert({
-                        'id': userResponse['id'], // This is the foreign key to users table
-                        'department_id': _departmentController.text,
-                        'specialization': _specializationController.text,
-                        'bio': _bioController.text,
-                        'status': _selectedStatus,
-                        'contact_info': {
-                          'email': _emailController.text,
-                        },
-                      });
-
-                  _loadTeachers();
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Teacher added successfully'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to add teacher: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-
-                setState(() => _isLoading = false);
-              }
-            },
-            child: const Text('Add Teacher'),
-          ),
-        ],
-      ),
+  Future<void> _navigateToAddTeacher() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddTeacherScreen()),
     );
+
+    // If a teacher was added (result is true), refresh the list
+    if (result == true) {
+      _loadTeachers();
+    }
   }
 
   void _showEditTeacherDialog(int index) {
@@ -374,7 +197,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                   items: _departments.map((department) {
                     return DropdownMenuItem<String>(
                       value: department['id'].toString(),
-                      child: Text(department['name']?.toString() ?? 'Unknown Department'),
+                      child: Text(department['name']?.toString() ??
+                          'Unknown Department'),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -432,28 +256,22 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
 
                 try {
                   // Update the user record
-                  await supabase
-                      .from(AppConstants.tableUsers)
-                      .update({
-                        'full_name': _nameController.text,
-                        'email': _emailController.text,
-                        'updated_at': DateTime.now().toIso8601String(),
-                      })
-                      .eq('id', teacher['id']);
+                  await supabase.from(AppConstants.tableUsers).update({
+                    'full_name': _nameController.text,
+                    'email': _emailController.text,
+                    'updated_at': DateTime.now().toIso8601String(),
+                  }).eq('id', teacher['id']);
 
                   // Update the teacher record
-                  await supabase
-                      .from(AppConstants.tableTeachers)
-                      .update({
-                        'department_id': _departmentController.text,
-                        'specialization': _specializationController.text,
-                        'bio': _bioController.text,
-                        'status': _selectedStatus,
-                        'contact_info': {
-                          'email': _emailController.text,
-                        },
-                      })
-                      .eq('id', teacher['id']);
+                  await supabase.from(AppConstants.tableTeachers).update({
+                    'department_id': _departmentController.text,
+                    'specialization': _specializationController.text,
+                    'bio': _bioController.text,
+                    'status': _selectedStatus,
+                    'contact_info': {
+                      'email': _emailController.text,
+                    },
+                  }).eq('id', teacher['id']);
 
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
                   _loadTeachers();
@@ -470,7 +288,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Failed to update teacher: ${e.toString()}'),
+                        content:
+                            Text('Failed to update teacher: ${e.toString()}'),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -589,7 +408,7 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                 ),
                 const SizedBox(width: 16),
                 FilledButton.icon(
-                  onPressed: _showAddTeacherDialog,
+                  onPressed: _navigateToAddTeacher,
                   icon: const Icon(Icons.add),
                   label: const Text('Add Teacher'),
                 ),
@@ -617,7 +436,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
                                 title: Text(
-                                  teacher['users']['full_name'] ?? 'Unknown Teacher',
+                                  teacher['users']['full_name'] ??
+                                      'Unknown Teacher',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -627,7 +447,8 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
                                   children: [
                                     Text(teacher['users']['email'] ?? ''),
                                     if (teacher['specialization'] != null)
-                                      Text('Specialization: ${teacher['specialization']}'),
+                                      Text(
+                                          'Specialization: ${teacher['specialization']}'),
                                     Text(
                                       'Department: ${teacher['departments']['name'] ?? 'Not assigned'}',
                                       style: const TextStyle(
@@ -672,9 +493,9 @@ class _TeacherManagementScreenState extends State<TeacherManagementScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTeacherDialog,
+        onPressed: _navigateToAddTeacher,
         child: const Icon(Icons.add),
       ),
     );
   }
-} 
+}

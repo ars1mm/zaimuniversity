@@ -77,6 +77,12 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'route': '/manage_teachers',
           },
           {
+            'title': 'Add Teacher',
+            'icon': Icons.person_add,
+            'color': Colors.green.shade600,
+            'route': '/add_teacher',
+          },
+          {
             'title': 'Manage Courses',
             'icon': Icons.book,
             'color': Colors.orange.shade700,
@@ -135,6 +141,12 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'icon': Icons.person,
             'color': Colors.green.shade700,
             'route': '/manage_teachers',
+          },
+          {
+            'title': 'Add Teacher',
+            'icon': Icons.person_add,
+            'color': Colors.green.shade600,
+            'route': '/add_teacher',
           },
           {
             'title': 'Manage Courses',

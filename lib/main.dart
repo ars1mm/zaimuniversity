@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import 'screens/login_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/add_student_screen.dart';
+import 'screens/add_teacher_screen.dart';
 import 'screens/course_management_screen.dart';
 import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
@@ -16,7 +17,7 @@ import 'screens/profile_screen.dart';
 import 'screens/user_profile_management_screen.dart';
 import './services/logger_service.dart';
 import './utils/route_guard.dart';
-
+import './constants/app_constants.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -162,8 +163,23 @@ class CampusInfoSystemApp extends StatelessWidget {
                   return snapshot.data ?? const LoginScreen();
                 },
               ),
+            );          case '/add_teacher':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const AddTeacherScreen(),
+                  allowedRoles: AppConstants.adminRoles,
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
             );
-
           case '/manage_teachers':
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(

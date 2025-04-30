@@ -30,16 +30,17 @@ class RouteGuard {
         ),
       );
       return const LoginScreen();
-    }
-
-    // Check if user role is allowed
-    if (allowedRoles.contains(userRole)) {
+    }    // Check if user role is allowed
+    final hasAccess = allowedRoles.contains(userRole.toLowerCase());
+    print('Role check: User role=$userRole, Allowed roles=$allowedRoles, Has access=$hasAccess'); // Debug log
+    
+    if (hasAccess) {
       return targetWidget;
     } else {
       // User doesn't have access, show unauthorized page or snackbar
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You don\'t have permission to access this page'),
+        SnackBar(
+          content: Text('Access denied. Your role ($userRole) does not have permission to access this page.'),
           backgroundColor: Colors.red,
         ),
       );
