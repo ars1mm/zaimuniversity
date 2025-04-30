@@ -85,6 +85,14 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Ignore build files in android/app directory
+/android/app/build/
+/android/app/.gradle/
+/android/app/.cxx/
+/android/app/outputs/
+/android/app/intermediates/
+/android/app/generated/
+
 # Coverage reports
 coverage/
 

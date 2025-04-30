@@ -17,17 +17,11 @@ class CourseService {
       if (!isAdmin) {
         _logger.warning('Unauthorized attempt to fetch all courses');
         throw Exception('Unauthorized: Admin privileges required');
-      }
-
-      // Fetch courses from Supabase with proper join
-      final response = await _supabase
-          .from('courses')
-          .select('''
+      } // Fetch courses from Supabase with proper join
+      final response = await _supabase.from('courses').select('''
             *,
-            departments (name),
-            users!instructor_id (name)
-          ''')
-          .order('title');
+            departments (name)
+          ''').order('title');
 
       _logger.info('Retrieved ${response.length} courses from database');
       return List<Map<String, dynamic>>.from(response);
@@ -98,11 +92,8 @@ class CourseService {
         'created_by': _supabase.auth.currentUser?.id,
       };
 
-      final response = await _supabase
-          .from('courses')
-          .insert(courseData)
-          .select()
-          .single();
+      final response =
+          await _supabase.from('courses').insert(courseData).select().single();
 
       _logger.info('Course added successfully: ${response['id']}');
 
@@ -180,10 +171,7 @@ class CourseService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      await _supabase
-          .from('courses')
-          .update(courseData)
-          .eq('id', id);
+      await _supabase.from('courses').update(courseData).eq('id', id);
 
       _logger.info('Course updated successfully: $id ($title)');
 
@@ -236,10 +224,8 @@ class CourseService {
   Future<List<Map<String, dynamic>>> getDepartments() async {
     try {
       _logger.info('Fetching departments');
-      final response = await _supabase
-          .from('departments')
-          .select('id, name')
-          .order('name');
+      final response =
+          await _supabase.from('departments').select('id, name').order('name');
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.severe('Error fetching departments', e);
@@ -303,10 +289,7 @@ class CourseService {
       if (instructorId != null) updates['instructor_id'] = instructorId;
       if (status != null) updates['status'] = status;
 
-      await _supabase
-          .from('courses')
-          .update(updates)
-          .eq('id', courseId);
+      await _supabase.from('courses').update(updates).eq('id', courseId);
       _logger.info('Course updated successfully: $courseId');
     } catch (e) {
       _logger.severe('Error updating course', e);
@@ -317,10 +300,7 @@ class CourseService {
   Future<void> deleteCourseById(String courseId) async {
     try {
       _logger.info('Deleting course: $courseId');
-      await _supabase
-          .from('courses')
-          .delete()
-          .eq('id', courseId);
+      await _supabase.from('courses').delete().eq('id', courseId);
       _logger.info('Course deleted successfully: $courseId');
     } catch (e) {
       _logger.severe('Error deleting course', e);

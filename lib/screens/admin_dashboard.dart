@@ -94,6 +94,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () {
                 Navigator.pop(context);
               },
+            ), // Students Section
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 8.0),
+              child: Text(
+                'Students',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.people),
@@ -104,19 +115,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.school),
-              title: const Text('Manage Courses'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/manage_courses');
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.person_add),
               title: const Text('Add Student'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/add_student');
+              },
+            ),
+
+            // Teachers Section
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 8.0),
+              child: Text(
+                'Teachers',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_alt),
+              title: const Text('Manage Teachers'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/manage_teachers');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add_alt_1),
+              title: const Text('Add Teacher'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/add_teacher');
               },
             ),
             ListTile(
@@ -127,12 +159,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Navigator.pushNamed(context, '/assign_supervisor');
               },
             ),
+
+            // Courses Section
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 8.0),
+              child: Text(
+                'Courses',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
             ListTile(
-              leading: const Icon(Icons.business),
-              title: const Text('Create Department'),
+              leading: const Icon(Icons.school),
+              title: const Text('Manage Courses'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/create_department');
+                Navigator.pushNamed(context, '/manage_courses');
               },
             ),
             ListTile(
@@ -143,12 +188,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 Navigator.pushNamed(context, '/create_course');
               },
             ),
+
+            // Department Section
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 8.0),
+              child: Text(
+                'Department',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
             ListTile(
-              leading: const Icon(Icons.people_alt),
-              title: const Text('Manage Teachers'),
+              leading: const Icon(Icons.business),
+              title: const Text('Create Department'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/manage_teachers');
+                Navigator.pushNamed(context, '/create_department');
               },
             ),
             const Divider(),

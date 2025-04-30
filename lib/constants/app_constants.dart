@@ -35,7 +35,6 @@ class AppConstants {
   static const String tokenKey = 'auth_token';
   static const String userIdKey = 'user_id';
   static const String userRoleKey = 'user_role';
-
   // User Roles
   static const String roleAdmin = 'admin';
   static const String roleStudent = 'student';
@@ -43,6 +42,11 @@ class AppConstants {
   static const String roleStaff = 'staff';
   static const String roleSupervisor = 'supervisor';
   static const String roleTeacher = 'teacher';
+
+  // Role Lists for Authorization
+  static const List<String> adminRoles = ['admin'];
+  static const List<String> teachingRoles = ['admin', 'teacher', 'supervisor'];
+  static const List<String> managementRoles = ['admin', 'supervisor'];
 
   // Asset Paths
 }
