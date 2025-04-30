@@ -35,6 +35,126 @@ To set up the project locally, follow these steps:
     flutter run
     ```
 
+### Running with an Emulator
+
+To run the project using an Android or iOS emulator from the terminal, follow these steps:
+
+#### Prerequisites
+- Android SDK with emulator images installed (for Android)
+- Xcode with simulator installed (for iOS, macOS only)
+- Flutter SDK properly set up in your PATH
+
+#### Installing Emulators
+
+##### Android Emulator Installation
+
+1. **Install Android Studio**
+   - Download and install [Android Studio](https://developer.android.com/studio)
+   - During installation, ensure the "Android Virtual Device" option is selected
+
+2. **Create a Virtual Device**
+   - Open Android Studio
+   - Go to Tools > AVD Manager (or click the AVD Manager icon in the toolbar)
+   - Click "Create Virtual Device"
+   - Select a device definition (e.g., Pixel 6)
+   - Select a system image (preferably the latest stable Android version)
+   - Complete the setup with default settings or customize as needed
+   - Click "Finish"
+
+3. **Verify Installation**
+   - From the terminal/PowerShell, run:
+     ```powershell
+     flutter emulators
+     ```
+   - You should see your newly created emulator in the list
+
+##### iOS Simulator Installation (macOS only)
+
+1. **Install Xcode**
+   - Download Xcode from the Mac App Store
+   - Open Xcode and accept the license agreement
+   - Install additional components when prompted
+
+2. **Create iOS Simulator**
+   - Open Xcode
+   - Go to Xcode > Open Developer Tool > Simulator
+   - In Simulator, go to File > New Simulator
+   - Configure the simulator with your desired device and iOS version
+   - Click "Create"
+
+3. **Verify Installation**
+   - From the terminal, run:
+     ```bash
+     xcrun simctl list
+     ```
+   - You should see your newly created simulator in the list
+
+#### Steps to Run on Emulator
+
+1. **List available emulators**
+    ```powershell
+    flutter emulators
+    ```
+
+2. **Launch a specific emulator**
+    ```powershell
+    flutter emulators --launch <emulator_id>
+    ```
+    Replace `<emulator_id>` with the ID of your desired emulator from step 1.
+
+3. **Run the application on the launched emulator**
+    ```powershell
+    flutter run
+    ```
+
+#### Running on a Specific Device/Emulator
+If you have multiple devices connected or emulators running:
+
+1. **List available devices**
+    ```powershell
+    flutter devices
+    ```
+    This will show output similar to:
+    ```
+    3 connected devices:
+
+    Pixel 6 Pro (mobile) • emulator-5554 • android-x64 • Android 13 (API 33)
+    Chrome (web)         • chrome        • web-javascript • Google Chrome 113.0.5672.93
+    Edge (web)           • edge          • web-javascript • Microsoft Edge 113.0.1774.35
+    ```
+
+2. **Identify the device ID**
+    The device ID is the second value in each row. For example:
+    - `emulator-5554` for the Pixel 6 Pro emulator
+    - `chrome` for Chrome browser
+    - `edge` for Edge browser
+    - For physical devices, it will usually show a serial number
+
+3. **Run on a specific device**
+    ```powershell
+    flutter run -d <device_id>
+    ```
+    Replace `<device_id>` with the ID identified in step 2.
+    
+    Example:
+    ```powershell
+    flutter run -d emulator-5554
+    ```
+
+#### Additional Flags
+- For faster development builds:
+    ```powershell
+    flutter run --debug
+    ```
+- For performance testing:
+    ```powershell
+    flutter run --profile
+    ```
+- For release version:
+    ```powershell
+    flutter run --release
+    ```
+
 ### Testing
 
 To run the tests, use the following command:
