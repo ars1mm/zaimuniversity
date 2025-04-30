@@ -26,7 +26,16 @@ This table extends the Users table with student-specific information.
 - `academic_standing` (string)
 - `preferences` (JSON)
 
-### 3. Teachers
+### 3. Supervisors
+This table extends the Users table with supervisor-specific information.
+- `id` (UUID, primary key, references users.id)
+- `department_id` (UUID, foreign key)
+- `specialization` (string)
+- `bio` (text)
+- `contact_info` (JSON)
+- `created_at` (timestamp)
+
+### 4. Teachers
 This table extends the Users table with teacher-specific information.
 - `id` (UUID, primary key, references users.id)
 - `department_id` (UUID, foreign key)
@@ -35,14 +44,14 @@ This table extends the Users table with teacher-specific information.
 - `bio` (text)
 - `status` (enum: 'active', 'on_leave', 'retired')
 
-### 4. Departments
+### 5. Departments
 This table stores university departments.
 - `id` (UUID, primary key)
 - `name` (string)
 - `description` (text)
 - `supervisor_id` (UUID, foreign key to users.id)
 
-### 5. Courses
+### 6. Courses
 This table stores information about university courses.
 - `id` (UUID, primary key)
 - `title` (string)
@@ -57,7 +66,7 @@ This table stores information about university courses.
 - `updated_at` (timestamp)
 - `created_by` (UUID, foreign key to users.id)
 
-### 6. Course_Enrollments
+### 7. Course_Enrollments
 This junction table tracks which students are enrolled in which courses.
 - `id` (UUID, primary key)
 - `student_id` (UUID, foreign key to students.id)
@@ -66,7 +75,7 @@ This junction table tracks which students are enrolled in which courses.
 - `status` (enum: 'active', 'withdrawn', 'completed')
 - `final_grade` (float, nullable)
 
-### 7. Course_Materials
+### 8. Course_Materials
 This table stores materials/resources for courses.
 - `id` (UUID, primary key)
 - `course_id` (UUID, foreign key to courses.id)
@@ -77,7 +86,7 @@ This table stores materials/resources for courses.
 - `uploaded_by` (UUID, foreign key to users.id)
 - `uploaded_at` (timestamp)
 
-### 8. Homework_Assignments
+### 9. Homework_Assignments
 This table stores homework assignments for courses.
 - `id` (UUID, primary key)
 - `course_id` (UUID, foreign key to courses.id)
@@ -89,7 +98,7 @@ This table stores homework assignments for courses.
 - `created_at` (timestamp)
 - `updated_at` (timestamp)
 
-### 9. Homework_Submissions
+### 10. Homework_Submissions
 This table tracks student submissions for homework.
 - `id` (UUID, primary key)
 - `homework_id` (UUID, foreign key to homework_assignments.id)
@@ -101,7 +110,7 @@ This table tracks student submissions for homework.
 - `graded_by` (UUID, foreign key to teachers.id)
 - `graded_at` (timestamp)
 
-### 10. Transcripts
+### 11. Transcripts
 This table stores student academic records.
 - `id` (UUID, primary key)
 - `student_id` (UUID, foreign key to students.id)
@@ -111,7 +120,7 @@ This table stores student academic records.
 - `academic_standing` (string)
 - `generated_at` (timestamp)
 
-### 11. Course_Approvals
+### 12. Course_Approvals
 This table tracks the course approval process by supervisors.
 - `id` (UUID, primary key)
 - `course_id` (UUID, foreign key to courses.id)
@@ -122,12 +131,12 @@ This table tracks the course approval process by supervisors.
 
 ## Database Relationships
 
-1. **One-to-one relationship between Users and Students/Teachers**
-   - Each student/teacher record is associated with exactly one user record
+1. **One-to-one relationship between Users and Students/Teachers/Supervisors**
+   - Each student/teacher/supervisor record is associated with exactly one user record
 
-2. **One-to-many relationship between Departments and Users (supervisors)**
-   - A department has one supervisor
+2. **One-to-many relationship between Supervisors and Departments**
    - A supervisor can manage multiple departments
+   - Each department has one assigned supervisor
 
 3. **One-to-many relationship between Departments and Courses**
    - A department offers multiple courses
@@ -176,8 +185,8 @@ Both `contact_info` in the Students and Teachers tables and `preferences` in the
 
 
 ### Database Relationships
-1. One-to-one relationship between Users and Students/Teachers
-2. One-to-many relationship between Departments and Users (supervisors)
+1. One-to-one relationship between Users and Students/Teachers/Supervisors
+2. One-to-many relationship between Supervisors and Departments
 3. One-to-many relationship between Departments and Courses
 4. One-to-many relationship between Teachers and Courses
 5. Many-to-many relationship between Students and Courses (via Course_Enrollments)
@@ -185,3 +194,4 @@ Both `contact_info` in the Students and Teachers tables and `preferences` in the
 7. One-to-many relationship between Courses and Homework_Assignments
 8. One-to-many relationship between Homework_Assignments and Homework_Submissions
 9. One-to-many relationship between Students and Transcripts
+10. One-to-many relationship between Supervisors and Course_Approvals

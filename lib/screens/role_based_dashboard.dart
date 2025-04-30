@@ -113,6 +113,12 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'route': '/assign_supervisor',
           },
           {
+            'title': 'Create Supervisor',
+            'icon': Icons.person_add,
+            'color': Colors.teal.shade700,
+            'route': '/create_supervisor',
+          },
+          {
             'title': 'Manage User Profiles',
             'icon': Icons.people,
             'color': Colors.amber.shade700,

@@ -21,7 +21,8 @@ class AuthService extends BaseService {
       }
       return user['role'] as String?;
     } catch (e, stackTrace) {
-      _logger.error('Error getting user role', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error getting user role',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -38,6 +39,27 @@ class AuthService extends BaseService {
     }
   }
 
+  /// Refreshes and returns the current session (used to restore admin sessions)
+  Future<bool> refreshSession() async {
+    try {
+      _logger.info('Refreshing user session', tag: _tag);
+
+      // Try to restore session from local storage or server
+      if (auth.currentSession == null) {
+        _logger.info('No current session, login required', tag: _tag);
+        return false;
+      }
+
+      // Attempt to refresh token
+      await supabase.auth.refreshSession();
+      return auth.currentSession != null;
+    } catch (e, stackTrace) {
+      _logger.error('Error refreshing session',
+          tag: _tag, error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
   /// Gets the current user's data
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
@@ -47,16 +69,14 @@ class AuthService extends BaseService {
         return null;
       }
 
-      final userData = await supabase
-          .from('users')
-          .select()
-          .eq('id', user.id)
-          .single();
+      final userData =
+          await supabase.from('users').select().eq('id', user.id).single();
 
       _logger.info('Retrieved current user data', tag: _tag);
       return userData;
     } catch (e, stackTrace) {
-      _logger.error('Error getting current user', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error getting current user',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -92,7 +112,8 @@ class AuthService extends BaseService {
       _logger.debug('User logged out successfully', tag: _tag);
       return true;
     } catch (e, stackTrace) {
-      _logger.error('Error during logout', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error during logout',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return false;
     }
   }
@@ -111,7 +132,8 @@ class AuthService extends BaseService {
       _logger.debug('User role: $role', tag: _tag);
       return role == 'admin';
     } catch (e, stackTrace) {
-      _logger.error('Error checking admin role', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error checking admin role',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return false;
     }
   }
