@@ -132,6 +132,7 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
           },
         ];
         break;
+// TODO: fix non-implemented routes
       case 'supervisor':
         dashboardTitle = 'Supervisor Dashboard';
         primaryColor = Colors.teal;
