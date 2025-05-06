@@ -126,8 +126,9 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
           if (existingUsers.isNotEmpty) {
             userId = existingUsers[0]['id'];
             _logger.info('Found existing user with ID: $userId');
-
-            // Check if this user already has a teacher record            final List<dynamic> existingTeacher = await supabase
+            
+            // Check if this user already has a teacher record
+            final List<dynamic> existingTeacher = await supabase
                 .from(AppConstants.tableTeachers)
                 .select('id')
                 .eq('id', userId.toString())
@@ -217,7 +218,9 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
             'updated_at': DateTime.now().toIso8601String(),
           }).eq('id', userId);
         }
-      }      // Now create the teacher record with the same userId
+      }
+      
+      // Now create the teacher record with the same userId
       await supabase.from(AppConstants.tableTeachers).insert({
         'id': userId, // Use the ID from the auth user
         'department_id': _departmentController.text,
@@ -230,7 +233,8 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
         },
       });
       
-      // Bypass RLS by using an RPC function for storage operations      try {
+      // Bypass RLS by using an RPC function for storage operations
+      try {
         // This function should be created in Supabase to enable admin operations
         // that bypass RLS policies for storage
         await supabase.rpc('admin_ensure_bucket_exists', params: {
@@ -261,9 +265,7 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
         _bioController.clear();
         _departmentController.clear();
         _phoneController.clear();
-        _selectedStatus = 'active';
-
-        // Navigate back to teacher management screen with success result
+        _selectedStatus = 'active';        // Navigate back to teacher management screen with success result
         Navigator.of(context).pop(true); // true indicates a teacher was added
       }
     } catch (e) {
