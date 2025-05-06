@@ -81,20 +81,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: _getProfileColor(_userData!['role']),
-                        child: Text(
-                          (_userData!['full_name'] != null &&
-                                  _userData!['full_name'].toString().isNotEmpty)
-                              ? _userData!['full_name']
-                                  .toString()
-                                  .substring(0, 1)
-                                  .toUpperCase()
-                              : 'U',
-                          style: const TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        backgroundImage: _userData!['profile_picture_url'] !=
+                                null
+                            ? NetworkImage(_userData!['profile_picture_url'])
+                            : null,
+                        child: _userData!['profile_picture_url'] == null
+                            ? Text(
+                                (_userData!['full_name'] != null &&
+                                        _userData!['full_name']
+                                            .toString()
+                                            .isNotEmpty)
+                                    ? _userData!['full_name']
+                                        .toString()
+                                        .substring(0, 1)
+                                        .toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(height: 24),
                       Text(
