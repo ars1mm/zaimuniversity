@@ -233,148 +233,110 @@ class _UserProfileManagementScreenState
   Future<void> _changeUserProfilePicture(Map<String, dynamic> user) async {
     try {
       final imagePicker = ImagePicker();
-      final XFile? image =
-          await imagePicker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
 
       if (image == null) return;
 
-      setState(() => _isLoading = true); // Upload the image to Supabase Storage
+      setState(() => _isLoading = true);
+
+      // Upload the image to Supabase Storage
       final userId = user['id'];
       final fileName =
           '${DateTime.now().millisecondsSinceEpoch}.${_getFileExtension(image)}';
 
-      // Use 'profile-images' bucket to match RLS policies
-      const bucketName = 'profile-images';
-
-      // Simplify the storage path to avoid deep nesting
+      // Storage path: userId/fileName (make sure userId is always the first folder)
       final storagePath = '$userId/$fileName';
 
       // Get image bytes
       final Uint8List fileBytes = await image.readAsBytes();
 
       // Get mime type
-      final String contentType =
-          'image/${_getFileExtension(image).toLowerCase()}';
+      final String contentType = 'image/${_getFileExtension(image)}';
+
       _logger.info(
           'Uploading image to $storagePath with content type $contentType');
 
-      // For RLS purposes, ensure the user is authenticated
       final currentUser = _supabase.auth.currentUser;
       if (currentUser == null) {
         throw Exception('You must be logged in to upload profile pictures');
       }
 
-      // Log authentication info for debugging
-      _logger.info('Admin User ID: ${currentUser.id}');
+      _logger.info('Current User ID: ${currentUser.id}');
       _logger.info('Target User ID for upload: $userId');
 
-      try {
-        // Check if storage service is accessible
-        await _supabase.storage.listBuckets();
-        _logger.info('Storage service is accessible');
+      String imageUrl;
+      const profileImagesBucket = 'profile-images';
 
-        // Check if bucket exists
-        final buckets = await _supabase.storage.listBuckets();
-        bool bucketExists = buckets.any((bucket) => bucket.name == bucketName);
-
-        if (!bucketExists) {
-          // Create the bucket with public access and proper RLS policies
-          _logger.info('Creating bucket: $bucketName');
-          await _supabase.storage.createBucket(
-            bucketName,
-            const BucketOptions(
-              public: true,
-              fileSizeLimit: '5242880', // 5MB limit
-            ),
-          );
-
-          // Wait a moment for bucket creation to propagate
-          await Future.delayed(const Duration(seconds: 1));
-        }
-
-        // Check for existing files and remove them to avoid clutter
-        try {
-          final existingFiles =
-              await _supabase.storage.from(bucketName).list(path: userId);
-          _logger
-              .info('Found ${existingFiles.length} existing profile pictures');
-
-          // Delete existing files if there are any
-          if (existingFiles.isNotEmpty) {
-            for (final file in existingFiles) {
-              await _supabase.storage
-                  .from(bucketName)
-                  .remove(['$userId/${file.name}']);
-            }
-            _logger.info('Cleaned up existing profile pictures');
-          }
-        } catch (e) {
-          // Just log this error, don't throw - we'll continue with upload
-          _logger.warning('Error checking for existing files: $e');
-        }
-
-        // Important: Use RPC call to authenticate as service role for admin operations
-        // This bypasses RLS policies for the admin user
-        await _supabase.rpc('upload_profile_picture',
-            params: {'user_id': userId, 'file_name': fileName});
-
-        // Now that the policy is temporarily bypassed for this operation, upload the file
-        await _supabase.storage.from(bucketName).uploadBinary(
+      // Check if current user is uploading their own image or is an admin
+      if (currentUser.id == userId) {
+        // User uploading their own profile picture
+        await _supabase.storage.from(profileImagesBucket).uploadBinary(
               storagePath,
               fileBytes,
               fileOptions: FileOptions(
                 contentType: contentType,
-                upsert: true, // Override if exists
+                upsert: true,
               ),
             );
 
-        // Get the public URL of the uploaded image
-        final imageUrl =
-            _supabase.storage.from(bucketName).getPublicUrl(storagePath);
-
-        // Update the user's profile_picture_url in the database
-        await _supabase
-            .from(AppConstants.tableUsers)
-            .update({'profile_picture_url': imageUrl}).eq('id', userId);
-
-        _logger.info('Updated profile picture URL in database: $imageUrl');
-
-        // Refresh the users list
-        await _loadUsers();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile picture updated successfully'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
+        // Get public URL
+        imageUrl = _supabase.storage
+            .from(profileImagesBucket)
+            .getPublicUrl(storagePath);
+      } else {
+        // Admin uploading someone else's picture
+        final isAdmin = await _authService.isAdmin();
+        if (!isAdmin) {
+          throw Exception(
+              'Only administrators can update other users\' profile pictures');
         }
-      } catch (storageError) {
-        _logger.severe('Error in storage operations: $storageError');
-        throw storageError; // Re-throw to be caught by the outer catch
+
+        // Use direct path format for admin uploads
+        await _supabase.storage.from(profileImagesBucket).uploadBinary(
+              storagePath,
+              fileBytes,
+              fileOptions: FileOptions(
+                contentType: contentType,
+                upsert: true,
+              ),
+            );
+
+        // Get public URL
+        imageUrl = _supabase.storage
+            .from(profileImagesBucket)
+            .getPublicUrl(storagePath);
+      }
+
+      // Update the user's profile_picture_url in the database
+      await _supabase
+          .from(AppConstants.tableUsers)
+          .update({'profile_picture_url': imageUrl}).eq('id', userId);
+
+      _logger.info('Updated profile picture URL in database: $imageUrl');
+
+      // Refresh the users list
+      await _loadUsers();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       _logger.severe('Error updating profile picture', e);
 
-      // Provide specific error messages based on the error type
-      String errorMessage = 'Error updating profile picture';
-      if (e.toString().contains('row-level security policy')) {
-        errorMessage =
-            'Permission denied: Admin role requires additional storage permissions. Please check Supabase RLS policies.';
-      } else if (e.toString().contains('bucket not found')) {
-        errorMessage = 'Bucket not found: The storage bucket does not exist';
-      } else if (e.toString().contains('401')) {
-        errorMessage = 'Authentication error: Please sign in again';
-      } else {
-        errorMessage = 'Error: ${e.toString()}';
-      }
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('Failed to update profile picture: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
