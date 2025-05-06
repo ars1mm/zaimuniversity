@@ -210,6 +210,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
               },
             ),
             const Divider(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 8.0),
+              child: Text(
+                'User Management',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_circle),
+              title: const Text('Manage User Profiles'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/profile_management');
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),

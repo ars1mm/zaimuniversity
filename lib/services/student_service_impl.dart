@@ -24,7 +24,9 @@ class StudentServiceImpl extends BaseService {
       // First, verify that the user record exists in the users table
       final userExists = await verifyUserExists(userId);
       if (!userExists) {
-        _logger.warning('User ID $userId does not exist in users table. Creating it now.', tag: _tag);
+        _logger.warning(
+            'User ID $userId does not exist in users table. Creating it now.',
+            tag: _tag);
 
         // Create the user record if it doesn't exist
         final userData = {
@@ -65,14 +67,16 @@ class StudentServiceImpl extends BaseService {
           .select()
           .single();
 
-      _logger.info('Student record created successfully for ID: $studentId', tag: _tag);
+      _logger.info('Student record created successfully for ID: $studentId',
+          tag: _tag);
       return {
         'success': true,
         'message': 'Student added successfully',
         'data': response
       };
     } catch (e, stackTrace) {
-      _logger.error('Failed to create student record for ID: $studentId', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Failed to create student record for ID: $studentId',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to add student: ${e.toString()}',
@@ -85,9 +89,7 @@ class StudentServiceImpl extends BaseService {
     _logger.info('Retrieving all students', tag: _tag);
     try {
       // Query the users table for users with student role and join with students and departments
-      final response = await supabase
-          .from(AppConstants.tableUsers)
-          .select('''
+      final response = await supabase.from(AppConstants.tableUsers).select('''
             *,
             students (
               *,
@@ -95,9 +97,7 @@ class StudentServiceImpl extends BaseService {
                 name
               )
             )
-          ''')
-          .eq('role', AppConstants.roleStudent)
-          .order('full_name');
+          ''').eq('role', AppConstants.roleStudent).order('full_name');
 
       if (response.isEmpty) {
         _logger.warning('No students found in the database', tag: _tag);
@@ -108,15 +108,18 @@ class StudentServiceImpl extends BaseService {
         };
       }
 
-      _logger.info('Retrieved ${response.length} students from database', tag: _tag);
+      _logger.info('Retrieved ${response.length} students from database',
+          tag: _tag);
 
       // Process the response to ensure proper data structure
       final processedResponse = response.map((user) {
         // Safely access nested data with null checks
         final studentData = user['students'] as List<dynamic>?;
-        final student = studentData?.isNotEmpty == true ? studentData!.first : null;
-        final departmentData = student?['departments'] as Map<String, dynamic>? ?? {};
-        
+        final student =
+            studentData?.isNotEmpty == true ? studentData!.first : null;
+        final departmentData =
+            student?['departments'] as Map<String, dynamic>? ?? {};
+
         return {
           'id': user['id']?.toString() ?? '',
           'student_id': student?['student_id']?.toString() ?? '',
@@ -124,7 +127,8 @@ class StudentServiceImpl extends BaseService {
           'email': user['email']?.toString() ?? '',
           'department': departmentData['name']?.toString() ?? 'Unknown',
           'enrollment_date': student?['enrollment_date']?.toString() ?? '',
-          'academic_standing': student?['academic_standing']?.toString() ?? 'Unknown',
+          'academic_standing':
+              student?['academic_standing']?.toString() ?? 'Unknown',
           'status': user['status']?.toString() ?? 'active',
         };
       }).toList();
@@ -135,7 +139,8 @@ class StudentServiceImpl extends BaseService {
         'data': processedResponse,
       };
     } catch (e, stackTrace) {
-      _logger.error('Error retrieving students', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error retrieving students',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to retrieve students: ${e.toString()}',
@@ -160,7 +165,8 @@ class StudentServiceImpl extends BaseService {
         'data': response,
       };
     } catch (e, stackTrace) {
-      _logger.error('Failed to retrieve student with ID: $studentId', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Failed to retrieve student with ID: $studentId',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to retrieve student: ${e.toString()}',
@@ -193,18 +199,18 @@ class StudentServiceImpl extends BaseService {
           'message': 'No changes to update',
         };
       }
-
       await supabase
           .from(AppConstants.tableStudents)
           .update(updateData)
-          .eq('id', userId);
+          .eq('id', userId.toString());
 
       return {
         'success': true,
         'message': 'Student updated successfully',
       };
     } catch (e, stackTrace) {
-      _logger.error('Failed to update student with ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Failed to update student with ID: $userId',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to update student: ${e.toString()}',
@@ -217,17 +223,24 @@ class StudentServiceImpl extends BaseService {
     _logger.info('Deleting student with ID: $userId', tag: _tag);
     try {
       // First delete from students table
-      await supabase.from(AppConstants.tableStudents).delete().eq('id', userId);
+      await supabase
+          .from(AppConstants.tableStudents)
+          .delete()
+          .eq('id', userId.toString());
 
       // Then delete from users table
-      await supabase.from(AppConstants.tableUsers).delete().eq('id', userId);
+      await supabase
+          .from(AppConstants.tableUsers)
+          .delete()
+          .eq('id', userId.toString());
 
       return {
         'success': true,
         'message': 'Student deleted successfully',
       };
     } catch (e, stackTrace) {
-      _logger.error('Failed to delete student with ID: $userId', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Failed to delete student with ID: $userId',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return {
         'success': false,
         'message': 'Failed to delete student: ${e.toString()}',

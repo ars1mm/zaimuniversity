@@ -9,10 +9,12 @@ class DepartmentManagementScreen extends StatefulWidget {
   const DepartmentManagementScreen({super.key});
 
   @override
-  State<DepartmentManagementScreen> createState() => _DepartmentManagementScreenState();
+  State<DepartmentManagementScreen> createState() =>
+      _DepartmentManagementScreenState();
 }
 
-class _DepartmentManagementScreenState extends State<DepartmentManagementScreen> {
+class _DepartmentManagementScreenState
+    extends State<DepartmentManagementScreen> {
   final Logger _logger = Logger('DepartmentManagementScreen');
   List<Map<String, dynamic>> _departments = [];
   bool _isLoading = true;
@@ -46,7 +48,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
           .order('name');
 
       if (!mounted) return;
-      
+
       setState(() {
         _departments = List<Map<String, dynamic>>.from(response);
         _isLoading = false;
@@ -54,7 +56,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
     } catch (e) {
       _logger.severe('Error loading departments', e);
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading departments: ${e.toString()}'),
@@ -139,7 +141,7 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   });
 
                   if (!mounted) return;
-                  
+
                   _loadDepartments();
 
                   if (!mounted) return;
@@ -151,10 +153,11 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   );
                 } catch (e) {
                   if (!mounted) return;
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to add department: ${e.toString()}'),
+                      content:
+                          Text('Failed to add department: ${e.toString()}'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -223,19 +226,16 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 setState(() => _isLoading = true);
 
                 try {
-                  await supabase
-                      .from(AppConstants.tableDepartments)
-                      .update({
-                        'name': _nameController.text,
-                        'description': _descriptionController.text,
-                        'updated_at': DateTime.now().toIso8601String(),
-                      })
-                      .eq('id', department['id']);
+                  await supabase.from(AppConstants.tableDepartments).update({
+                    'name': _nameController.text,
+                    'description': _descriptionController.text,
+                    'updated_at': DateTime.now().toIso8601String(),
+                  }).eq('id', department['id'].toString());
 
                   if (!mounted) return;
-                  
+
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  
+
                   _loadDepartments();
 
                   scaffoldMessenger.showSnackBar(
@@ -246,10 +246,11 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                   );
                 } catch (e) {
                   if (!mounted) return;
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to update department: ${e.toString()}'),
+                      content:
+                          Text('Failed to update department: ${e.toString()}'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -294,10 +295,10 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 await supabase
                     .from(AppConstants.tableDepartments)
                     .delete()
-                    .eq('id', department['id']);
+                    .eq('id', department['id'].toString());
 
                 if (!mounted) return;
-                
+
                 setState(() {
                   _departments.removeWhere((d) => d['id'] == department['id']);
                 });
@@ -310,10 +311,11 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
                 );
               } catch (e) {
                 if (!mounted) return;
-                
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Failed to delete department: ${e.toString()}'),
+                    content:
+                        Text('Failed to delete department: ${e.toString()}'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -438,4 +440,4 @@ class _DepartmentManagementScreenState extends State<DepartmentManagementScreen>
       ),
     );
   }
-} 
+}

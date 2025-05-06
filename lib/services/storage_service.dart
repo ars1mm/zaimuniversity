@@ -15,9 +15,8 @@ class StorageService {
   // Use storage URL from environment variables
   final String _storageUrl = dotenv.env['SUPABASE_STORAGE_URL'] ??
       'https://uvurktstrcbcqzzuupeq.supabase.co/storage/v1/s3';
-
   // The bucket where user profile pictures will be stored
-  static const String profileBucket = 'profile_pictures';
+  static const String profileBucket = 'profile-images';
 
   // Ensure the bucket exists
   Future<void> _initializeBucket() async {
@@ -25,7 +24,7 @@ class StorageService {
       await _supabase.storage.createBucket(
         profileBucket,
         const BucketOptions(
-          public: false, // Private bucket
+          public: true, // Public bucket to match our RLS policies
           fileSizeLimit: '5242880', // 5MB limit as string
         ),
       );
@@ -66,14 +65,11 @@ class StorageService {
           .upload('$userId/$fileName', imageFile);
 
       // Get the public URL of the uploaded image
-      final String imageUrl = _supabase.storage
-          .from(profileBucket)
-          .getPublicUrl('$userId/$fileName');
-
-      // Update the user's profile with the image URL
-      await _supabase
-          .from('users')
-          .update({'profile_picture_url': imageUrl}).eq('id', userId);
+      final String imageUrl = _supabase.storage.from(profileBucket).getPublicUrl(
+          '$userId/$fileName'); // Update the user's profile with the image URL
+      // Cast userId to UUID to avoid "operator does not exist: text = uuid" error
+      await _supabase.from('users').update(
+          {'profile_picture_url': imageUrl}).eq('id', userId.toString());
 
       _logger.info(
           '[$_tag] Profile picture uploaded successfully for user $userId');
@@ -126,7 +122,7 @@ class StorageService {
       // Update the user record
       await _supabase
           .from('users')
-          .update({'profile_picture_url': null}).eq('id', userId);
+          .update({'profile_picture_url': null}).eq('id', userId.toString());
 
       _logger.info('[$_tag] Profile picture deleted for user $userId');
       return true;

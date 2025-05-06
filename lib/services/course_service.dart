@@ -171,7 +171,10 @@ class CourseService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      await _supabase.from('courses').update(courseData).eq('id', id);
+      await _supabase
+          .from('courses')
+          .update(courseData)
+          .eq('id', id.toString());
 
       _logger.info('Course updated successfully: $id ($title)');
 
@@ -201,10 +204,8 @@ class CourseService {
           'success': false,
           'message': 'Unauthorized: Admin privileges required',
         };
-      }
-
-      // Delete course
-      await _supabase.from('courses').delete().eq('id', id);
+      } // Delete course
+      await _supabase.from('courses').delete().eq('id', id.toString());
 
       _logger.info('Course deleted successfully: $id');
 
@@ -289,7 +290,10 @@ class CourseService {
       if (instructorId != null) updates['instructor_id'] = instructorId;
       if (status != null) updates['status'] = status;
 
-      await _supabase.from('courses').update(updates).eq('id', courseId);
+      await _supabase
+          .from('courses')
+          .update(updates)
+          .eq('id', courseId.toString());
       _logger.info('Course updated successfully: $courseId');
     } catch (e) {
       _logger.severe('Error updating course', e);
@@ -300,7 +304,7 @@ class CourseService {
   Future<void> deleteCourseById(String courseId) async {
     try {
       _logger.info('Deleting course: $courseId');
-      await _supabase.from('courses').delete().eq('id', courseId);
+      await _supabase.from('courses').delete().eq('id', courseId.toString());
       _logger.info('Course deleted successfully: $courseId');
     } catch (e) {
       _logger.severe('Error deleting course', e);

@@ -13,6 +13,7 @@ class RoleBasedDashboard extends StatefulWidget {
 class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
   final AuthService _authService = AuthService();
   String _userName = "User";
+  String? _profilePictureUrl;
   bool _isLoading = true;
 
   @override
@@ -29,6 +30,7 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
       if (user != null && mounted) {
         setState(() {
           _userName = user['full_name'] ?? "User";
+          _profilePictureUrl = user['profile_picture_url'];
         });
       }
     } catch (e) {
@@ -262,14 +264,21 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Text(
-                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
+                    backgroundImage: _profilePictureUrl != null
+                        ? NetworkImage(_profilePictureUrl!)
+                        : null,
+                    child: _profilePictureUrl == null
+                        ? Text(
+                            _userName.isNotEmpty
+                                ? _userName[0].toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -328,16 +337,21 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
                           CircleAvatar(
                             radius: 30,
                             backgroundColor: primaryColor,
-                            child: Text(
-                              _userName.isNotEmpty
-                                  ? _userName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
+                            backgroundImage: _profilePictureUrl != null
+                                ? NetworkImage(_profilePictureUrl!)
+                                : null,
+                            child: _profilePictureUrl == null
+                                ? Text(
+                                    _userName.isNotEmpty
+                                        ? _userName[0].toUpperCase()
+                                        : 'U',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 16),
                           Column(
