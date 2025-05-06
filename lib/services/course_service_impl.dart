@@ -23,14 +23,11 @@ class CourseServiceImpl extends BaseService {
       }
 
       // Fetch courses from Supabase with proper join
-      final response = await supabase
-          .from('courses')
-          .select('''
+      final response = await supabase.from('courses').select('''
             *,
             departments (name),
             users!instructor_id (name)
-          ''')
-          .order('title');
+          ''').order('title');
 
       _logger.info('Retrieved ${response.length} courses from database');
       return List<Map<String, dynamic>>.from(response);
@@ -190,7 +187,7 @@ class CourseServiceImpl extends BaseService {
       final response = await supabase
           .from(AppConstants.tableCourses)
           .update(courseData)
-          .eq('id', id)
+          .eq('id', id.toString())
           .select()
           .single();
 
@@ -224,11 +221,10 @@ class CourseServiceImpl extends BaseService {
           'message': 'Unauthorized: Admin privileges required',
         };
       }
-
       await supabase
           .from(AppConstants.tableCourses)
           .delete()
-          .eq('id', courseId);
+          .eq('id', courseId.toString());
 
       _logger.info('Course deleted successfully');
 
@@ -253,7 +249,7 @@ class CourseServiceImpl extends BaseService {
       final response = await supabase
           .from(AppConstants.tableCourses)
           .select('*, ${AppConstants.tableDepartments}(name)')
-          .eq('id', courseId)
+          .eq('id', courseId.toString())
           .single();
 
       return {

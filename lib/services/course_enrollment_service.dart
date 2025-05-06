@@ -73,8 +73,7 @@ class CourseEnrollmentService extends BaseService {
       final isTeacher = await _roleService.isTeacher();
 
       if (!isAdmin && !isTeacher) {
-        _logger.warning(
-            'Unauthorized attempt to fetch course enrollments');
+        _logger.warning('Unauthorized attempt to fetch course enrollments');
         return {
           'success': false,
           'message': 'Unauthorized: Admin or teacher privileges required',
@@ -95,7 +94,8 @@ class CourseEnrollmentService extends BaseService {
         };
       }
 
-      _logger.info('Retrieved ${response.length} enrollments for course: $courseId');
+      _logger.info(
+          'Retrieved ${response.length} enrollments for course: $courseId');
 
       return {
         'success': true,
@@ -130,7 +130,8 @@ class CourseEnrollmentService extends BaseService {
         };
       }
 
-      _logger.info('Retrieved ${response.length} enrollments for student: $studentId');
+      _logger.info(
+          'Retrieved ${response.length} enrollments for student: $studentId');
 
       return {
         'success': true,
@@ -162,8 +163,7 @@ class CourseEnrollmentService extends BaseService {
       final isTeacher = await _roleService.isTeacher();
 
       if (!isAdmin && !isTeacher) {
-        _logger.warning(
-            'Unauthorized attempt to add course material');
+        _logger.warning('Unauthorized attempt to add course material');
         return {
           'success': false,
           'message': 'Unauthorized: Admin or teacher privileges required',
@@ -221,7 +221,8 @@ class CourseEnrollmentService extends BaseService {
         };
       }
 
-      _logger.info('Retrieved ${response.length} materials for course: $courseId');
+      _logger
+          .info('Retrieved ${response.length} materials for course: $courseId');
 
       return {
         'success': true,
@@ -247,18 +248,16 @@ class CourseEnrollmentService extends BaseService {
       final isTeacher = await _roleService.isTeacher();
 
       if (!isAdmin && !isTeacher) {
-        _logger.warning(
-            'Unauthorized attempt to delete course material');
+        _logger.warning('Unauthorized attempt to delete course material');
         return {
           'success': false,
           'message': 'Unauthorized: Admin or teacher privileges required',
         };
       }
-
       await supabase
           .from(AppConstants.tableCourseMaterials)
           .delete()
-          .eq('id', materialId);
+          .eq('id', materialId.toString());
 
       _logger.info('Course material deleted successfully');
 

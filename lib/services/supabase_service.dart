@@ -16,16 +16,16 @@ class SupabaseService extends BaseService {
         _logger.warning('No authenticated user found', tag: _tag);
         return null;
       }
-
       final userData = await supabase
           .from(AppConstants.tableUsers)
           .select('role')
-          .eq('id', user.id)
+          .eq('id', user.id.toString())
           .single();
 
       return userData['role'] as String?;
     } catch (e, stackTrace) {
-      _logger.error('Error getting user role', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error getting user role',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -60,13 +60,15 @@ class SupabaseService extends BaseService {
       _logger.info('Getting current user', tag: _tag);
       return auth.currentUser;
     } catch (e, stackTrace) {
-      _logger.error('Error getting current user', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error getting current user',
+          tag: _tag, error: e, stackTrace: stackTrace);
       return null;
     }
   }
 
   // Authentication methods
-  Future<AuthResponse> signUp({required String email, required String password}) async {
+  Future<AuthResponse> signUp(
+      {required String email, required String password}) async {
     _logger.info('Creating new user account', tag: _tag);
     try {
       // Clean email and ensure it's in proper format
@@ -75,7 +77,8 @@ class SupabaseService extends BaseService {
 
       // If email doesn't contain @, append the institutional domain
       if (!cleanEmail.contains('@')) {
-        String sanitizedPart = cleanEmail.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+        String sanitizedPart =
+            cleanEmail.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
         if (sanitizedPart.isEmpty) sanitizedPart = 'user';
         authEmail = '$sanitizedPart@zaim.edu.tr';
         _logger.warning('Using fallback email for auth', tag: _tag);
@@ -94,7 +97,8 @@ class SupabaseService extends BaseService {
       return result;
     } catch (e, stackTrace) {
       if (e is AuthException) {
-        _logger.error('Auth error creating account', tag: _tag, error: e, stackTrace: stackTrace);
+        _logger.error('Auth error creating account',
+            tag: _tag, error: e, stackTrace: stackTrace);
 
         // Special handling for common email issues
         if (e.message == 'email_address_invalid') {
@@ -103,13 +107,15 @@ class SupabaseService extends BaseService {
           _logger.warning('User already exists', tag: _tag);
         }
       } else {
-        _logger.error('Failed to create auth account', tag: _tag, error: e, stackTrace: stackTrace);
+        _logger.error('Failed to create auth account',
+            tag: _tag, error: e, stackTrace: stackTrace);
       }
       rethrow;
     }
   }
 
-  Future<AuthResponse> signIn({required String email, required String password}) async {
+  Future<AuthResponse> signIn(
+      {required String email, required String password}) async {
     _logger.info('Attempting to sign in user', tag: _tag);
     try {
       final result = await auth.signInWithPassword(
@@ -124,7 +130,8 @@ class SupabaseService extends BaseService {
       }
       return result;
     } catch (e, stackTrace) {
-      _logger.error('Failed to sign in user', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Failed to sign in user',
+          tag: _tag, error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -135,7 +142,8 @@ class SupabaseService extends BaseService {
       await auth.signOut();
       _logger.info('User signed out successfully', tag: _tag);
     } catch (e, stackTrace) {
-      _logger.error('Error signing out user', tag: _tag, error: e, stackTrace: stackTrace);
+      _logger.error('Error signing out user',
+          tag: _tag, error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -148,7 +156,8 @@ class SupabaseService extends BaseService {
     required String userId,
     String status = 'active',
   }) async {
-    _logger.info('Creating user record for: $email with role: $role', tag: _tag);
+    _logger.info('Creating user record for: $email with role: $role',
+        tag: _tag);
     try {
       final Map<String, dynamic> userData = {
         'id': userId,
@@ -173,7 +182,8 @@ class SupabaseService extends BaseService {
         'data': response
       };
     } catch (e) {
-      _logger.error('Failed to create user record for: $email', tag: _tag, error: e);
+      _logger.error('Failed to create user record for: $email',
+          tag: _tag, error: e);
       return {
         'success': false,
         'message': 'Failed to create user: ${e.toString()}',
@@ -198,7 +208,9 @@ class SupabaseService extends BaseService {
       final userExists = await _verifyUserExists(userId);
 
       if (!userExists) {
-        _logger.warning('User ID $userId does not exist in users table. Creating it now.', tag: _tag);
+        _logger.warning(
+            'User ID $userId does not exist in users table. Creating it now.',
+            tag: _tag);
 
         // Create the user record if it doesn't exist
         final userData = {
@@ -239,14 +251,16 @@ class SupabaseService extends BaseService {
           .select()
           .single();
 
-      _logger.info('Student record created successfully for ID: $studentId', tag: _tag);
+      _logger.info('Student record created successfully for ID: $studentId',
+          tag: _tag);
       return {
         'success': true,
         'message': 'Student added successfully',
         'data': response
       };
     } catch (e) {
-      _logger.error('Failed to create student record for ID: $studentId', tag: _tag, error: e);
+      _logger.error('Failed to create student record for ID: $studentId',
+          tag: _tag, error: e);
       return {
         'success': false,
         'message': 'Failed to add student: ${e.toString()}',
@@ -266,7 +280,9 @@ class SupabaseService extends BaseService {
 
       // If no students were found, try a different query to diagnose the issue
       if (response.isEmpty) {
-        _logger.warning('No students found with the primary query. Trying a direct query to check if students exist.', tag: _tag);
+        _logger.warning(
+            'No students found with the primary query. Trying a direct query to check if students exist.',
+            tag: _tag);
 
         // Try a simple query to check if students table has any records at all
         final directQuery = await supabase
@@ -275,9 +291,13 @@ class SupabaseService extends BaseService {
             .limit(5);
 
         if (directQuery.isNotEmpty) {
-          _logger.warning('Found ${directQuery.length} student records with direct query, but join failed. Possible join configuration issue.', tag: _tag);
+          _logger.warning(
+              'Found ${directQuery.length} student records with direct query, but join failed. Possible join configuration issue.',
+              tag: _tag);
         } else {
-          _logger.warning('No student records found even with direct query. Students table might be empty.', tag: _tag);
+          _logger.warning(
+              'No student records found even with direct query. Students table might be empty.',
+              tag: _tag);
         }
       }
 
@@ -309,12 +329,13 @@ class SupabaseService extends BaseService {
       final response = await supabase
           .from(AppConstants.tableUsers)
           .select('id')
-          .eq('id', userId)
+          .eq('id', userId.toString())
           .maybeSingle();
 
       return response != null;
     } catch (e) {
-      _logger.error('Error verifying user existence: $userId', tag: _tag, error: e);
+      _logger.error('Error verifying user existence: $userId',
+          tag: _tag, error: e);
       return false;
     }
   }

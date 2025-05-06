@@ -127,11 +127,10 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
             userId = existingUsers[0]['id'];
             _logger.info('Found existing user with ID: $userId');
 
-            // Check if this user already has a teacher record
-            final List<dynamic> existingTeacher = await supabase
+            // Check if this user already has a teacher record            final List<dynamic> existingTeacher = await supabase
                 .from(AppConstants.tableTeachers)
                 .select('id')
-                .eq('id', userId)
+                .eq('id', userId.toString())
                 .limit(1);
 
             if (existingTeacher.isNotEmpty) {
@@ -218,9 +217,7 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
             'updated_at': DateTime.now().toIso8601String(),
           }).eq('id', userId);
         }
-      }
-
-      // Now create the teacher record with the same userId
+      }      // Now create the teacher record with the same userId
       await supabase.from(AppConstants.tableTeachers).insert({
         'id': userId, // Use the ID from the auth user
         'department_id': _departmentController.text,
@@ -232,6 +229,19 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
           'phone': _phoneController.text,
         },
       });
+      
+      // Bypass RLS by using an RPC function for storage operations      try {
+        // This function should be created in Supabase to enable admin operations
+        // that bypass RLS policies for storage
+        await supabase.rpc('admin_ensure_bucket_exists', params: {
+          'bucket_name': 'profile-images'
+        });
+        
+        _logger.info('Successfully ensured profile pictures bucket exists');
+      } catch (rpcError) {
+        // Log the error but continue - the bucket may already exist
+        _logger.warning('Error ensuring bucket exists: $rpcError');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

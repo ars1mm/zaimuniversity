@@ -68,9 +68,11 @@ class AuthService extends BaseService {
         _logger.warning('No user is currently logged in', tag: _tag);
         return null;
       }
-
-      final userData =
-          await supabase.from('users').select().eq('id', user.id).single();
+      final userData = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id.toString())
+          .single();
 
       _logger.info('Retrieved current user data', tag: _tag);
       return userData;

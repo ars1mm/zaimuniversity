@@ -20,11 +20,12 @@ abstract class BaseService {
       final response = await supabase
           .from('users')
           .select()
-          .eq('id', userId)
+          .eq('id', userId.toString())
           .single();
       return response != null;
     } catch (e, stackTrace) {
-      _logger.severe('[$_tag] Error verifying user existence: $userId', e, stackTrace);
+      _logger.severe(
+          '[$_tag] Error verifying user existence: $userId', e, stackTrace);
       return false;
     }
   }
