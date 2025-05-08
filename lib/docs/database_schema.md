@@ -125,9 +125,9 @@ This table tracks the course approval process by supervisors.
 - `id` (UUID, primary key)
 - `course_id` (UUID, foreign key to courses.id)
 - `supervisor_id` (UUID, foreign key to users.id with role='supervisor')
-- `status` (enum: 'approved', 'rejected', 'pending')
-- `feedback` (text)
-- `reviewed_at` (timestamp)
+- `status` (text) - Possible values: 'approved', 'rejected', 'pending'
+- `feedback` (text) - Supervisor's comments or feedback about the course
+- `reviewed_at` (timestamptz) - When the supervisor reviewed the course
 
 ## Database Relationships
 

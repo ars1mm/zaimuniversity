@@ -9,6 +9,7 @@ This directory contains documentation for the Campus Information System applicat
 - [Row Level Security Setup](./rls_setup_instructions.md) - Instructions for setting up RLS in Supabase
 - [Supabase Admin Functions](./supabase_admin_functions.sql) - SQL functions for admin operations
 - [Supabase RLS Profiles](./supabase_rls_profiles.sql) - SQL for RLS policies
+- [Course Approvals Schema](./course_approvals_schema.sql) - SQL schema for course approval workflow
 
 ### User Management
 - [Profile Management](./profile_management.md) - User profile management documentation
