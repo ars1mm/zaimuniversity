@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:zaimuniversity/screens/homework_submission_screen.dart';
-import 'package:zaimuniversity/screens/homework_assignment_screen.dart';
+import '../screens/homework_assignment_screen.dart';
 
 class HomeworkRouter {
   // Navigate to the appropriate screen based on user role

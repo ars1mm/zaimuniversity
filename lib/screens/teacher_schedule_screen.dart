@@ -85,7 +85,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   }
 
   Future<void> _showAddScheduleDialog() async {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     String selectedCourseId = '';
     String selectedDay = 'Monday';
     TimeOfDay startTime = TimeOfDay.now();
@@ -122,11 +122,10 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
     }
 
     // Handle time picker
-    Future<TimeOfDay?> _selectTime(
-        BuildContext context, TimeOfDay initialTime) async {
+    Future<TimeOfDay?> selectTime(BuildContext context) async {
       return showTimePicker(
         context: context,
-        initialTime: initialTime,
+        initialTime: startTime,
         builder: (BuildContext context, Widget? child) {
           return MediaQuery(
             data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
@@ -146,7 +145,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
               content: isLoadingCourses
                   ? const Center(child: CircularProgressIndicator())
                   : Form(
-                      key: _formKey,
+                      key: formKey,
                       child: SingleChildScrollView(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -169,8 +168,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                                 items: teacherCourses.map((course) {
                                   return DropdownMenuItem<String>(
                                     value: course['id'],
-                                    child: Text(
-                                        '${course['title']} (${course['code'] ?? 'No Code'})'),
+                                    child: Text(course['title']),
                                   );
                                 }).toList(),
                                 onChanged: (value) {
@@ -214,8 +212,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                                 Expanded(
                                   child: InkWell(
                                     onTap: () async {
-                                      final picked =
-                                          await _selectTime(context, startTime);
+                                      final picked = await selectTime(context);
                                       if (picked != null) {
                                         setState(() {
                                           startTime = picked;
@@ -235,8 +232,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                                 Expanded(
                                   child: InkWell(
                                     onTap: () async {
-                                      final picked =
-                                          await _selectTime(context, endTime);
+                                      final picked = await selectTime(context);
                                       if (picked != null) {
                                         setState(() {
                                           endTime = picked;
@@ -290,7 +286,7 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                 if (!isLoadingCourses && teacherCourses.isNotEmpty)
                   FilledButton(
                     onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
+                      if (formKey.currentState!.validate()) {
                         // Check if end time is after start time
                         final startMinutes =
                             startTime.hour * 60 + startTime.minute;
@@ -427,17 +423,8 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                if (course['course_code'].isNotEmpty)
-                                  Text(
-                                    'Course Code: ${course['course_code']}',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                const SizedBox(height: 4),
                                 Text(
-                                  'Room: ${course['room']}',
+                                  'Room: ${course['room']}${course['building']?.isNotEmpty ?? false ? ', ${course['building']}' : ''}',
                                   style: const TextStyle(fontSize: 14),
                                 ),
                               ],

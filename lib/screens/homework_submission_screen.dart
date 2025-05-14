@@ -10,10 +10,10 @@ class HomeworkSubmissionScreen extends StatefulWidget {
   final String studentId;
 
   const HomeworkSubmissionScreen({
-    Key? key,
+    super.key,
     required this.homeworkId,
     required this.studentId,
-  }) : super(key: key);
+  });
 
   // Static method to check if the current user is a student
   static Future<bool> canAccess() async {
@@ -30,8 +30,7 @@ class HomeworkSubmissionScreen extends StatefulWidget {
   }
 
   @override
-  _HomeworkSubmissionScreenState createState() =>
-      _HomeworkSubmissionScreenState();
+  State<HomeworkSubmissionScreen> createState() => _HomeworkSubmissionScreenState();
 }
 
 class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
@@ -79,7 +78,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
 
       // Upload file to Supabase Storage
       final File file = File(_selectedFilePath!);
-      final response = await _supabase.storage
+      await _supabase.storage
           .from('homework_submissions')
           .upload(uniqueFileName, file);
 

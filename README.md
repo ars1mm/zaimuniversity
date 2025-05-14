@@ -192,7 +192,7 @@ If you encounter any issues, consider the following steps:
 - Ensure you have the latest version of Flutter installed
 - Check the project's dependencies in `pubspec.yaml` and update them if necessary
 - Review the error logs for specific details and search for solutions in the [Flutter Documentation](https://flutter.dev/docs)
-- For Supabase storage-related issues (particularly the "admin_ensure_bucket_exists" error), see our [Storage Troubleshooting Guide](lib/docs/supabase_storage_troubleshooting.md)
+- For Supabase storage-related issues (particularly the "admin_ensure_bucket_exists" error), see our [Storage Troubleshooting Guide](docs/troubleshooting/supabase-storage.md)
 
 For further assistance, feel free to open an issue in the repository.
 
@@ -200,10 +200,10 @@ For further assistance, feel free to open an issue in the repository.
 
 The following troubleshooting guides are available for common issues:
 
-- **Supabase Storage Issues**: See [Supabase Storage Troubleshooting](lib/docs/supabase_storage_troubleshooting.md) for solutions to storage-related problems.
-- **Teacher Schedule Issues**: See [Teacher Schedule Troubleshooting](lib/docs/teacher_schedule_troubleshooting.md) for solutions to schedule-related problems.
+- **Supabase Storage Issues**: See [Supabase Storage Troubleshooting](docs/troubleshooting/supabase-storage.md) for solutions to storage-related problems.
+- **Teacher Schedule Issues**: See [Teacher Schedule Troubleshooting](docs/troubleshooting/teacher-schedule.md) for solutions to schedule-related problems.
 
-For additional documentation, check the complete guides in the [docs directory](lib/docs/).
+For additional documentation, check the complete guides in the [docs directory](docs/).
 
 ### Architecture
 
@@ -225,6 +225,16 @@ lib/
 ├── utils/              # Utility functions and helpers
 └── constants/          # App-wide constants
 ```
+
+### Documentation
+
+Comprehensive documentation for the project is available in the [docs directory](docs/):
+
+- **[User Guides](docs/user-guides/)** - End-user documentation for different roles
+- **[Database](docs/database/)** - Database schema and SQL scripts
+- **[API](docs/api/)** - API and service documentation
+- **[Troubleshooting](docs/troubleshooting/)** - Common issues and solutions
+- **[Development](docs/development/)** - Guidelines for developers
 
 ### Contributors
 

@@ -7,10 +7,10 @@ class HomeworkAssignmentScreen extends StatefulWidget {
   final String teacherId;
 
   const HomeworkAssignmentScreen({
-    Key? key,
+    super.key,
     required this.courseId,
     required this.teacherId,
-  }) : super(key: key);
+  });
 
   // Static method to check if the current user is a teacher
   static Future<bool> canAccess() async {

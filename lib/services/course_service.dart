@@ -14,17 +14,51 @@ class CourseService {
     try {
       // Check if user has admin access
       final isAdmin = await _authService.isAdmin();
-      if (!isAdmin) {
-        _logger.warning('Unauthorized attempt to fetch all courses');
-        throw Exception('Unauthorized: Admin privileges required');
-      } // Fetch courses from Supabase with proper join
-      final response = await _supabase.from('courses').select('''
+      
+      // For admin users, fetch all courses with additional data
+      if (isAdmin) {
+        final response = await _supabase.from('courses').select('''
             *,
             departments (name)
           ''').order('title');
 
-      _logger.info('Retrieved ${response.length} courses from database');
-      return List<Map<String, dynamic>>.from(response);
+        _logger.info('Retrieved ${response.length} courses from database (admin view)');
+        return List<Map<String, dynamic>>.from(response);
+      } 
+      // For non-admin users, fetch only basic course data that everyone can access
+      else {
+        final user = _supabase.auth.currentUser;
+        if (user == null) {
+          throw Exception('User not authenticated');
+        }
+        
+        // Get the user's role
+        final userRole = await _authService.getUserRole();
+        
+        if (userRole == 'teacher') {
+          // Teachers can only see their own courses
+          final response = await _supabase.from('courses').select('''
+              id, title, department_id, 
+              departments (name)
+            ''')
+            .eq('instructor_id', user.id)
+            .order('title');
+          
+          _logger.info('Retrieved ${response.length} courses for teacher');
+          return List<Map<String, dynamic>>.from(response);
+        } else {
+          // Student or other non-admin user - show active courses only
+          final response = await _supabase.from('courses').select('''
+              id, title, department_id,
+              departments (name)
+            ''')
+            .eq('status', 'active')
+            .order('title');
+          
+          _logger.info('Retrieved ${response.length} active courses for non-admin user');
+          return List<Map<String, dynamic>>.from(response);
+        }
+      }
     } catch (e) {
       _logger.severe('Error retrieving courses', e);
       throw Exception('Failed to retrieve courses: ${e.toString()}');
@@ -227,6 +261,8 @@ class CourseService {
       _logger.info('Fetching departments');
       final response =
           await _supabase.from('departments').select('id, name').order('name');
+          
+      _logger.info('Received departments response: $response');
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.severe('Error fetching departments', e);
@@ -237,11 +273,14 @@ class CourseService {
   Future<List<Map<String, dynamic>>> getTeachers() async {
     try {
       _logger.info('Fetching teachers');
+      // Join with users table to get more information about teachers
       final response = await _supabase
           .from('users')
-          .select('id, name')
+          .select('id, full_name')
           .eq('role', 'teacher')
-          .order('name');
+          .order('full_name');
+          
+      _logger.info('Retrieved ${response.length} teachers');
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.severe('Error fetching teachers', e);
@@ -309,6 +348,28 @@ class CourseService {
     } catch (e) {
       _logger.severe('Error deleting course', e);
       throw Exception('Failed to delete course: $e');
+    }
+  }
+
+  /// Check if the current user is the instructor for a specific course
+  Future<bool> isInstructorForCourse(String courseId) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        return false;
+      }
+
+      final response = await _supabase
+          .from('courses')
+          .select('id')
+          .eq('id', courseId)
+          .eq('instructor_id', user.id)
+          .limit(1);
+
+      return response.isNotEmpty;
+    } catch (e) {
+      _logger.severe('Error checking if user is instructor for course', e);
+      return false;
     }
   }
 }

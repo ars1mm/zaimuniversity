@@ -26,6 +26,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Get the current authenticated user data safely
       final user = await _authService.getCurrentUser();
 
+      if (user == null) {
+        return;
+      }
+
       if (user != null && mounted) {
         // Make sure we have a valid user object with required fields
         setState(() {

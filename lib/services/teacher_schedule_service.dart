@@ -28,35 +28,25 @@ class TeacherScheduleService {
       final teacherId = teacherProfileResponse[0]['id'];
 
       // Get courses taught by this teacher
-      final coursesResponse = await supabase
-          .from('courses')
-          .select('id, title, code')
-          .eq('instructor_id', teacherId)
-          .eq('status', 'active');
+      final scheduleResponse = await supabase
+          .from('course_schedules')
+          .select('''
+            *,
+            courses!course_id (
+              id,
+              title,
+              description
+            )
+          ''')
+          .eq('courses.instructor_id', teacherId);
 
-      if (coursesResponse.isEmpty) {
+      if (scheduleResponse.isEmpty) {
         return _createEmptySchedule();
-      }
-
-      // Get all course schedules for this teacher's courses
-      List<Map<String, dynamic>> allSchedules = [];
-      
-      for (var course in coursesResponse) {
-        final scheduleResponse = await supabase
-            .from('course_schedules')
-            .select('*, rooms:room_id(name, building)')
-            .eq('course_id', course['id']);
-        
-        for (var schedule in scheduleResponse) {
-          schedule['course_title'] = course['title'];
-          schedule['course_code'] = course['code'];
-          allSchedules.add(schedule);
-        }
       }
 
       // Organize by day of the week
       final Map<String, List<Map<String, dynamic>>> scheduleByDay =
-          _organizeByDay(allSchedules);
+          _organizeByDay(scheduleResponse);
 
       return scheduleByDay;
     } catch (e) {
@@ -68,33 +58,36 @@ class TeacherScheduleService {
   /// Get all courses taught by the current teacher
   Future<List<Map<String, dynamic>>> getTeacherCourses() async {
     try {
+      _logger.info('Fetching courses for teacher');
       final user = supabase.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
       }
 
+      // Get teacher profile using user ID
       final teacherProfileResponse = await supabase
           .from(AppConstants.tableTeachers)
           .select('id')
-          .eq('id', user.id);
+          .eq('id', user.id)
+          .single();
 
-      if (teacherProfileResponse.isEmpty) {
+      if (teacherProfileResponse == null) {
         throw Exception('Teacher profile not found');
       }
 
-      final teacherId = teacherProfileResponse[0]['id'];
+      final teacherId = teacherProfileResponse['id'];
 
-      // Get courses taught by this teacher
-      final coursesResponse = await supabase
+      // Get courses where this teacher is the instructor
+      final response = await supabase
           .from('courses')
-          .select('id, title, code, description, credits')
+          .select('id, title, description, credits')
           .eq('instructor_id', teacherId)
           .eq('status', 'active');
 
-      return coursesResponse;
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.severe('Error getting teacher courses', e);
-      rethrow;
+      throw e;
     }
   }
 
@@ -136,20 +129,17 @@ class TeacherScheduleService {
 
     for (var schedule in schedules) {
       final day = schedule['day_of_week'] ?? 'Unknown';
-      final room = schedule['rooms'] != null ? schedule['rooms']['name'] : 'TBA';
-      final building =
-          schedule['rooms'] != null ? schedule['rooms']['building'] : '';
+      final course = schedule['courses'] ?? {};
 
       if (scheduleByDay.containsKey(day)) {
         scheduleByDay[day]!.add({
           'id': schedule['id'],
           'course_id': schedule['course_id'],
-          'course_title': schedule['course_title'] ?? 'Unknown Course',
-          'course_code': schedule['course_code'] ?? '',
+          'course_title': course['title'] ?? 'Unknown Course',
           'start_time': schedule['start_time'] ?? '00:00',
           'end_time': schedule['end_time'] ?? '00:00',
-          'room': room,
-          'building': building,
+          'room': schedule['room'] ?? 'TBA',
+          'building': schedule['building'] ?? '',
           'day_of_week': day,
         });
       }
@@ -157,9 +147,8 @@ class TeacherScheduleService {
 
     // Sort each day's schedule by start time
     scheduleByDay.forEach((day, daySchedules) {
-      daySchedules.sort((a, b) {
-        return (a['start_time'] ?? '').compareTo(b['start_time'] ?? '');
-      });
+      daySchedules.sort((a, b) => 
+        (a['start_time'] ?? '').compareTo(b['start_time'] ?? ''));
     });
 
     return scheduleByDay;
@@ -211,36 +200,14 @@ class TeacherScheduleService {
         };
       }
 
-      // Get or create room ID
-      int roomId;
-      final roomQuery = await supabase
-          .from('rooms')
-          .select('id')
-          .eq('name', room)
-          .eq('building', building ?? '');
-      
-      if (roomQuery.isEmpty) {
-        final newRoom = await supabase
-            .from('rooms')
-            .insert({
-              'name': room,
-              'building': building ?? '',
-              'capacity': 30  // Default capacity
-            })
-            .select('id')
-            .single();
-        roomId = newRoom['id'];
-      } else {
-        roomId = roomQuery[0]['id'];
-      }
-
-      // Insert the schedule
+      // Insert the schedule directly with room and building
       await supabase.from('course_schedules').insert({
         'course_id': courseId,
         'day_of_week': dayOfWeek,
         'start_time': startTime,
         'end_time': endTime,
-        'room_id': roomId,
+        'room': room,
+        'building': building ?? '',
       });
 
       return {
@@ -323,6 +290,24 @@ class TeacherScheduleService {
       _logger.severe('Error checking schedule conflicts', e);
       rethrow;
     }
+  }
+
+  Future<String?> _getTeacherId() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final teacherProfileResponse = await supabase
+        .from(AppConstants.tableTeachers)
+        .select('id')
+        .eq('id', user.id);
+
+    if (teacherProfileResponse.isEmpty) {
+      return null;
+    }
+
+    return teacherProfileResponse[0]['id'];
   }
 }
 

@@ -10,7 +10,7 @@ import 'package:logging/logging.dart';
 class ProfileManagementScreen extends StatefulWidget {
   static const String routeName = '/profile_management';
 
-  const ProfileManagementScreen({Key? key}) : super(key: key);
+  const ProfileManagementScreen({super.key});
 
   @override
   State<ProfileManagementScreen> createState() =>
@@ -549,7 +549,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: badgeColor.withOpacity(0.2),
+                                    color: Theme.of(context).primaryColor.withValues(alpha: 128, red: 0, green: 0, blue: 0),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(

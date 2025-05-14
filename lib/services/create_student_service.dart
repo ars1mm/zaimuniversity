@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
 import '../main.dart';
 import 'logger_service.dart';

@@ -17,6 +17,7 @@ import 'screens/profile_screen.dart';
 import 'screens/create_supervisor_screen.dart';
 import 'screens/teacher_schedule_screen.dart';
 import 'screens/student_schedule_screen.dart';
+import 'screens/teacher_course_screen.dart';
 // Re-import with full path to ensure it's properly recognized
 import 'package:zaimuniversity/screens/user_profile_management_screen.dart';
 import 'screens/profile_management_screen.dart';
@@ -378,6 +379,35 @@ class CampusInfoSystemApp extends StatelessWidget {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+          case '/teacher_courses':
+            // Add debug logs for teacher courses route
+            print('DEBUG: Entering teacher courses route case');
+            print('DEBUG: Teacher roles from constants: ${AppConstants.roleTeacher}, ${AppConstants.roleSupervisor}, ${AppConstants.roleAdmin}');
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const TeacherCourseScreen(),
+                  allowedRoles: [
+                    AppConstants.roleTeacher,
+                    AppConstants.roleSupervisor,
+                    AppConstants.roleAdmin
+                  ],
+                ),
+                builder: (context, snapshot) {
+                  print('DEBUG: Teacher courses FutureBuilder, snapshot state: ${snapshot.connectionState}');
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  if (snapshot.hasError) {
+                    print('DEBUG: Error in teacher courses FutureBuilder: ${snapshot.error}');
+                  }
+                  print('DEBUG: Teacher courses widget to return: ${snapshot.data?.runtimeType ?? "LoginScreen (fallback)"}');
                   return snapshot.data ?? const LoginScreen();
                 },
               ),

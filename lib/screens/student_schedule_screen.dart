@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import '../constants/app_constants.dart';
 import '../services/student_schedule_service.dart';
 
 class StudentScheduleScreen extends StatefulWidget {
@@ -81,7 +80,7 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
                 // Day selector
                 Container(
                   height: 60,
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 26, red: 0, green: 0, blue: 0),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: _weekdays.length,
