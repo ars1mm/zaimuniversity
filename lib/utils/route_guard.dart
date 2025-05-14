@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../screens/login_screen.dart';
 import '../screens/teacher_schedule_screen.dart';
-import '../screens/teacher_course_screen.dart';
 
 /// A utility class that protects routes based on user roles
 class RouteGuard {
@@ -21,11 +20,18 @@ class RouteGuard {
     // Check if user is logged in
     final isLoggedIn = await _authService.isLoggedIn();
     if (!isLoggedIn) {
+      print('DEBUG ROUTE GUARD: User is not logged in, redirecting to login');
       return const LoginScreen();
     }
 
+    // Get user information first to debug
+    final user = await _authService.getCurrentUser();
+    print('DEBUG ROUTE GUARD: Current user = $user');
+
     // Get user role
     final userRole = await _authService.getUserRole();
+    print('DEBUG ROUTE GUARD: Retrieved user role = "$userRole"');
+
     if (userRole == null) {
       // If we can't determine role, redirect to login
       ScaffoldMessenger.of(context).showSnackBar(
@@ -34,38 +40,25 @@ class RouteGuard {
           backgroundColor: Colors.red,
         ),
       );
+      print('DEBUG ROUTE GUARD: Role is null, redirecting to login');
       return const LoginScreen();
-    } 
-    
-    // Check if user role is allowed
+    } // Check if user role is allowed
     // Convert user role to lowercase for case-insensitive comparison
     final userRoleLower = userRole.toLowerCase();
     // Convert all allowed roles to lowercase for case-insensitive comparison
     final allowedRolesLower = allowedRoles
         .map((role) => role.toLowerCase())
-        .toList(); 
-    
-    // Special handling for teacher screens
-    if (userRoleLower == 'teacher') {
-      // Always allow teacher to access TeacherScheduleScreen
-      if (targetWidget is TeacherScheduleScreen) {
-        print('DEBUG OVERRIDE: Teacher accessing Teacher Schedule Screen - ALLOWING ACCESS');
-        return targetWidget;
-      }
-      
-      // Always allow teacher to access TeacherCourseScreen
-      if (targetWidget is TeacherCourseScreen) {
-        print('DEBUG OVERRIDE: Teacher accessing Teacher Course Screen - ALLOWING ACCESS');
-        return targetWidget;
-      }
+        .toList(); // Always allow teacher role for teacher schedule screen as a hard override
+    if (userRoleLower == 'teacher' && targetWidget is TeacherScheduleScreen) {
+      print(
+          'DEBUG OVERRIDE: Teacher accessing Teacher Schedule Screen - ALLOWING ACCESS');
+      return targetWidget;
     }
 
     final hasAccess = allowedRolesLower.contains(userRoleLower);
 
-    print('Role check: User role=$userRole (lowercase: $userRoleLower), ' +
-          'Allowed roles=$allowedRoles (lowercase: $allowedRolesLower), ' +
-          'Has access=$hasAccess, ' +
-          'Widget=${targetWidget.runtimeType}');
+    print(
+        'Role check: User role=$userRole (lowercase: $userRoleLower), Allowed roles=$allowedRoles (lowercase: $allowedRolesLower), Has access=$hasAccess'); // More detailed debug log
 
     if (hasAccess) {
       return targetWidget;

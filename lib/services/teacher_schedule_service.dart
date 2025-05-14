@@ -2,9 +2,11 @@
 import '../main.dart';
 import '../constants/app_constants.dart';
 import 'package:logging/logging.dart';
+import '../services/auth_service.dart';
 
 class TeacherScheduleService {
   final Logger _logger = Logger('TeacherScheduleService');
+  final AuthService _authService = AuthService();
 
   /// Retrieves the current teacher's schedule organized by day
   Future<Map<String, List<Map<String, dynamic>>>> getTeacherSchedule() async {
@@ -164,6 +166,18 @@ class TeacherScheduleService {
     String? building,
   }) async {
     try {
+      // Check if user has permission to create schedules
+      final isAdmin = await _authService.isAdmin();
+      final isSupervisor = await _authService.isSupervisor();
+      
+      if (!isAdmin && !isSupervisor) {
+        _logger.warning('Unauthorized attempt to create schedule by regular teacher');
+        return {
+          'success': false,
+          'message': 'You do not have permission to create or modify schedules'
+        };
+      }
+      
       final user = supabase.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');

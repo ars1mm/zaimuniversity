@@ -32,13 +32,24 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final success = await _authService.login(
+      final result = await _authService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      if (success && mounted) {
-        // Check user role and navigate accordingly
-        final userRole = await _authService.getUserRole();
+
+      print('DEBUG LOGIN: Login result = $result');
+
+      if (result['success'] == true && mounted) {
+        // Get user role from login result or fetch it separately
+        String? userRole = result['role'] as String?;
+
+        // If no role in result, fetch it explicitly
+        if (userRole == null) {
+          userRole = await _authService.getUserRole();
+        }
+
+        print('DEBUG LOGIN: User role = $userRole');
+
         if (!mounted) return;
 
         // Show appropriate welcome message based on role
@@ -50,9 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (_) =>
                 RoleBasedDashboard(userRole: userRole ?? 'student')));
       } else if (mounted) {
-        _showErrorSnackBar('Invalid email or password');
+        _showErrorSnackBar(result['message'] ?? 'Invalid email or password');
       }
     } catch (e) {
+      print('DEBUG LOGIN ERROR: $e');
       if (!mounted) return;
       _showErrorSnackBar('An error occurred. Please try again.');
     } finally {
@@ -96,7 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 400),
               padding: const EdgeInsets.all(AppConstants.defaultPadding),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 230, red: 255, green: 255, blue: 255),
+                color: Colors.white
+                    .withValues(alpha: 230, red: 255, green: 255, blue: 255),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(

@@ -16,7 +16,8 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
   final StudentScheduleService _scheduleService = StudentScheduleService();
   bool _isLoading = true;
   Map<String, List<Map<String, dynamic>>> _scheduleByDay = {};
-  int _selectedDayIndex = DateTime.now().weekday - 1; // Default to current day (0-based)
+  int _selectedDayIndex =
+      DateTime.now().weekday - 1; // Default to current day (0-based)
   final List<String> _weekdays = [
     'Monday',
     'Tuesday',
@@ -80,14 +81,17 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
                 // Day selector
                 Container(
                   height: 60,
-                  color: Theme.of(context).primaryColor.withValues(alpha: 26, red: 0, green: 0, blue: 0),
+                  color: Theme.of(context)
+                      .primaryColor
+                      .withValues(alpha: 26, red: 0, green: 0, blue: 0),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: _weekdays.length,
                     itemBuilder: (context, index) {
                       final isSelected = _selectedDayIndex == index;
                       final day = _weekdays[index];
-                      final hasClasses = _scheduleByDay[day]?.isNotEmpty ?? false;
+                      final hasClasses =
+                          _scheduleByDay[day]?.isNotEmpty ?? false;
 
                       return GestureDetector(
                         onTap: () => setState(() => _selectedDayIndex = index),
@@ -125,7 +129,9 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
                                   decoration: BoxDecoration(
                                     color: isSelected
                                         ? Colors.white
-                                        : Theme.of(context).colorScheme.secondary,
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),

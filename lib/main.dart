@@ -109,23 +109,30 @@ class CampusInfoSystemApp extends StatelessWidget {
         switch (settings.name) {
           case '/':
           case '/login':
-            return MaterialPageRoute(builder: (_) => const LoginScreen());
-
-          // Admin-only routes
+            return MaterialPageRoute(
+                builder: (_) => const LoginScreen()); // Admin-only routes
           case '/admin':
           case '/admin_dashboard':
+            print('DEBUG ROUTING: Admin route requested');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
                 future: RouteGuard.protectRoute(
                   context: context,
                   targetWidget: const AdminDashboard(),
-                  allowedRoles: ['admin'],
+                  allowedRoles: AppConstants.adminRoles,
                 ),
                 builder: (context, snapshot) {
+                  print(
+                      'DEBUG ADMIN ROUTE: Future builder state = ${snapshot.connectionState}');
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
+                  if (snapshot.hasError) {
+                    print('DEBUG ADMIN ROUTE ERROR: ${snapshot.error}');
+                  }
+                  print(
+                      'DEBUG ADMIN ROUTE: Returning widget = ${snapshot.data.runtimeType}');
                   return snapshot.data ?? const LoginScreen();
                 },
               ),
@@ -386,7 +393,8 @@ class CampusInfoSystemApp extends StatelessWidget {
           case '/teacher_courses':
             // Add debug logs for teacher courses route
             print('DEBUG: Entering teacher courses route case');
-            print('DEBUG: Teacher roles from constants: ${AppConstants.roleTeacher}, ${AppConstants.roleSupervisor}, ${AppConstants.roleAdmin}');
+            print(
+                'DEBUG: Teacher roles from constants: ${AppConstants.roleTeacher}, ${AppConstants.roleSupervisor}, ${AppConstants.roleAdmin}');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
                 future: RouteGuard.protectRoute(
@@ -399,15 +407,18 @@ class CampusInfoSystemApp extends StatelessWidget {
                   ],
                 ),
                 builder: (context, snapshot) {
-                  print('DEBUG: Teacher courses FutureBuilder, snapshot state: ${snapshot.connectionState}');
+                  print(
+                      'DEBUG: Teacher courses FutureBuilder, snapshot state: ${snapshot.connectionState}');
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
                   if (snapshot.hasError) {
-                    print('DEBUG: Error in teacher courses FutureBuilder: ${snapshot.error}');
+                    print(
+                        'DEBUG: Error in teacher courses FutureBuilder: ${snapshot.error}');
                   }
-                  print('DEBUG: Teacher courses widget to return: ${snapshot.data?.runtimeType ?? "LoginScreen (fallback)"}');
+                  print(
+                      'DEBUG: Teacher courses widget to return: ${snapshot.data?.runtimeType ?? "LoginScreen (fallback)"}');
                   return snapshot.data ?? const LoginScreen();
                 },
               ),

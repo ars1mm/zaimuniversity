@@ -1,14 +1,10 @@
-// ignore: unused_import
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
-import '../main.dart';
 import 'logger_service.dart';
-import 'supabase_service.dart';
 import 'base_service.dart';
 import '../constants/app_constants.dart';
 
-/// AuthService handles all authentication-related operations
+/// Fixed AuthService that properly handles role checking
 class AuthService extends BaseService {
-  final SupabaseService _supabaseService = SupabaseService();
   final _logger = LoggerService();
   static const String _tag = 'AuthService';
 
@@ -16,23 +12,19 @@ class AuthService extends BaseService {
   Future<String?> getUserRole() async {
     try {
       _logger.info('Getting user role from database', tag: _tag);
-
+      
       // First try to get the role using our custom DB function
       try {
         final roleResponse = await supabase.rpc('get_current_user_role');
         if (roleResponse != null) {
-          _logger.debug(
-              'Retrieved role from get_current_user_role(): "$roleResponse"',
-              tag: _tag);
+          _logger.debug('Retrieved role from get_current_user_role(): "$roleResponse"', tag: _tag);
           return roleResponse;
         }
       } catch (e) {
-        _logger.warning(
-            'Error calling get_current_user_role RPC: ${e.toString()}',
-            tag: _tag);
+        _logger.warning('Error calling get_current_user_role RPC: ${e.toString()}', tag: _tag);
         // Continue to fallback methods - don't return here
       }
-
+      
       // Fall back to getting from the users table directly
       final user = await getCurrentUser();
       if (user == null) {
@@ -55,30 +47,24 @@ class AuthService extends BaseService {
   Future<bool> hasRole(String roleName) async {
     try {
       _logger.debug('Checking if user has role: $roleName', tag: _tag);
-
-      // Convert requested role to lowercase for case-insensitive comparison
-      String roleNameLower = roleName.toLowerCase();
-
+      
       // Try RPC method first
       try {
         final response = await supabase.rpc('user_has_role', params: {
-          'role_name': roleNameLower // Send lowercase to RPC
+          'role_name': roleName
         });
-        _logger.debug('user_has_role($roleName) response: $response',
-            tag: _tag);
+        _logger.debug('user_has_role($roleName) response: $response', tag: _tag);
         if (response == true) return true;
       } catch (e) {
-        _logger.warning('Error calling user_has_role RPC: ${e.toString()}',
-            tag: _tag);
+        _logger.warning('Error calling user_has_role RPC: ${e.toString()}', tag: _tag);
         // Continue to fallback method
       }
 
       // Fallback: Check role directly
       final userRole = await getUserRole();
       if (userRole == null) return false;
-
-      // Case insensitive comparison
-      return userRole.toLowerCase() == roleNameLower;
+      
+      return userRole == roleName;
     } catch (e, stackTrace) {
       _logger.error('Error checking if user has role: $roleName',
           tag: _tag, error: e, stackTrace: stackTrace);
@@ -90,31 +76,24 @@ class AuthService extends BaseService {
   Future<bool> hasAnyRole(List<String> roles) async {
     try {
       _logger.debug('Checking if user has any roles: $roles', tag: _tag);
-
-      // Convert all requested roles to lowercase
-      List<String> rolesLower =
-          roles.map((role) => role.toLowerCase()).toList();
-
+      
       // Try RPC method first
       try {
         final response = await supabase.rpc('user_has_any_role', params: {
-          'roles': rolesLower // Send lowercase to RPC
+          'roles': roles
         });
-        _logger.debug('user_has_any_role($roles) response: $response',
-            tag: _tag);
+        _logger.debug('user_has_any_role($roles) response: $response', tag: _tag);
         if (response == true) return true;
       } catch (e) {
-        _logger.warning('Error calling user_has_any_role RPC: ${e.toString()}',
-            tag: _tag);
+        _logger.warning('Error calling user_has_any_role RPC: ${e.toString()}', tag: _tag);
         // Continue to fallback method
       }
 
       // Fallback: Check role directly
       final userRole = await getUserRole();
       if (userRole == null) return false;
-
-      // Case insensitive check
-      return rolesLower.contains(userRole.toLowerCase());
+      
+      return roles.contains(userRole);
     } catch (e, stackTrace) {
       _logger.error('Error checking if user has any roles: $roles',
           tag: _tag, error: e, stackTrace: stackTrace);
@@ -141,7 +120,7 @@ class AuthService extends BaseService {
 
       // Sanitize email input
       final sanitizedEmail = email.trim().toLowerCase();
-
+      
       final response = await auth.signInWithPassword(
         email: sanitizedEmail,
         password: password,
@@ -160,14 +139,12 @@ class AuthService extends BaseService {
       try {
         await supabase.auth.refreshSession();
       } catch (e) {
-        _logger.warning(
-            'Session refresh failed, using existing session: ${e.toString()}',
-            tag: _tag);
+        _logger.warning('Session refresh failed, using existing session: ${e.toString()}', tag: _tag);
       }
 
       final userData = await getCurrentUser();
       final role = userData?['role'] as String?;
-
+      
       _logger.info('User logged in successfully with role: $role', tag: _tag);
 
       return {
@@ -178,10 +155,10 @@ class AuthService extends BaseService {
       };
     } catch (e, stackTrace) {
       _logger.error('Login error', tag: _tag, error: e, stackTrace: stackTrace);
-
+      
       String errorMessage = 'Login failed';
       if (e is AuthException) {
-        switch (e.message) {
+        switch(e.message) {
           case 'Invalid login credentials':
             errorMessage = 'Incorrect email or password';
             break;
@@ -192,8 +169,12 @@ class AuthService extends BaseService {
             errorMessage = e.message;
         }
       }
-
-      return {'success': false, 'message': errorMessage, 'error': e.toString()};
+      
+      return {
+        'success': false,
+        'message': errorMessage,
+        'error': e.toString()
+      };
     }
   }
 
@@ -205,7 +186,7 @@ class AuthService extends BaseService {
         _logger.warning('No user is currently logged in', tag: _tag);
         return null;
       }
-
+      
       // Use properly parameterized query to avoid SQL injection
       try {
         final userData = await supabase
@@ -215,19 +196,16 @@ class AuthService extends BaseService {
             .maybeSingle();
 
         if (userData != null) {
-          _logger.info('Retrieved current user data from users table',
-              tag: _tag);
+          _logger.info('Retrieved current user data from users table', tag: _tag);
           return userData;
         }
       } catch (e) {
-        _logger.warning('Error getting user from users table: ${e.toString()}',
-            tag: _tag);
+        _logger.warning('Error getting user from users table: ${e.toString()}', tag: _tag);
         // Continue to fallback
       }
-
+      
       // Fallback: Return data from auth.currentUser
-      _logger.warning('User not found in users table, using auth data',
-          tag: _tag);
+      _logger.warning('User not found in users table, using auth data', tag: _tag);
       return {
         'id': user.id,
         'email': user.email,
@@ -281,7 +259,7 @@ class AuthService extends BaseService {
     return await hasRole(AppConstants.roleAdmin);
   }
 
-  /// Checks if the current user has teacher role
+  /// Checks if the current user has teacher role  
   Future<bool> isTeacher() async {
     return await hasRole(AppConstants.roleTeacher);
   }
@@ -295,4 +273,4 @@ class AuthService extends BaseService {
   Future<bool> isStudent() async {
     return await hasRole(AppConstants.roleStudent);
   }
-}
+} 

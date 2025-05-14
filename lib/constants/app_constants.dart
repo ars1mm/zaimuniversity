@@ -34,7 +34,7 @@ class AppConstants {
   // Shared Preferences Keys
   static const String tokenKey = 'auth_token';
   static const String userIdKey = 'user_id';
-  static const String userRoleKey = 'user_role';  // User Roles
+  static const String userRoleKey = 'user_role'; // User Roles
   static const String roleAdmin = 'admin';
   static const String roleStudent = 'student';
   static const String roleFaculty = 'faculty';

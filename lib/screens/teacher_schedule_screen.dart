@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import '../constants/app_constants.dart';
 import '../services/teacher_schedule_service.dart';
+import '../services/auth_service.dart';
 
 class TeacherScheduleScreen extends StatefulWidget {
   static const String routeName = '/teacher_schedule';
@@ -15,7 +16,9 @@ class TeacherScheduleScreen extends StatefulWidget {
 class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   final Logger _logger = Logger('TeacherScheduleScreen');
   final TeacherScheduleService _scheduleService = TeacherScheduleService();
+  final AuthService _authService = AuthService();
   bool _isLoading = true;
+  bool _canCreateSchedule = false;
   Map<String, List<Map<String, dynamic>>> _scheduleByDay = {};
   final List<String> _weekdays = [
     'Monday',
@@ -31,6 +34,25 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   void initState() {
     super.initState();
     _loadTeacherSchedule();
+    _checkPermissions();
+  }
+
+  Future<void> _checkPermissions() async {
+    try {
+      // Only admins and supervisors can create schedules
+      final isAdmin = await _authService.isAdmin();
+      final isSupervisor = await _authService.isSupervisor();
+      
+      if (mounted) {
+        setState(() {
+          _canCreateSchedule = isAdmin || isSupervisor;
+        });
+      }
+      
+      _logger.info('Schedule creation permission: $_canCreateSchedule');
+    } catch (e) {
+      _logger.severe('Error checking permissions', e);
+    }
   }
 
   Future<void> _loadTeacherSchedule() async {
@@ -76,15 +98,93 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildScheduleContent(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddScheduleDialog,
-        tooltip: 'Add Schedule Entry',
-        child: const Icon(Icons.add),
+      // Only show floating action button for admins and supervisors
+      floatingActionButton: _canCreateSchedule
+          ? FloatingActionButton(
+              onPressed: _showAddScheduleDialog,
+              tooltip: 'Add Schedule Entry',
+              child: const Icon(Icons.add),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildScheduleContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _weekdays.map((day) {
+          final coursesForDay = _scheduleByDay[day] ?? [];
+          return _buildDaySchedule(day, coursesForDay);
+        }).toList(),
       ),
     );
   }
 
+  Widget _buildDaySchedule(String day, List<Map<String, dynamic>> courses) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.blue.shade50,
+            width: double.infinity,
+            child: Text(
+              day,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (courses.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'No classes scheduled',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: courses.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final course = courses[index];
+                return _buildScheduleItem(course);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduleItem(Map<String, dynamic> course) {
+    return ListTile(
+      title: Text(
+        course['course_title'],
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text('Time: ${course['start_time']} - ${course['end_time']}'),
+          Text(
+              'Location: ${course['room']}${course['building'].isNotEmpty ? ' (${course['building']})' : ''}'),
+        ],
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    );
+  }
+
   Future<void> _showAddScheduleDialog() async {
+    // This method will only be called if the user has permission to create schedules
     final formKey = GlobalKey<FormState>();
     String selectedCourseId = '';
     String selectedDay = 'Monday';
@@ -95,6 +195,18 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
     final buildingController = TextEditingController();
     List<Map<String, dynamic>> teacherCourses = [];
     bool isLoadingCourses = true;
+
+    // Check permission again before proceeding
+    final hasPermission = await _authService.isAdmin() || await _authService.isSupervisor();
+    if (!hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You do not have permission to create schedules'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     // Load teacher's courses for the dropdown
     try {
@@ -287,6 +399,20 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
                   FilledButton(
                     onPressed: () async {
                       if (formKey.currentState!.validate()) {
+                        // Check permission again before submitting
+                        final hasPermission = await _authService.isAdmin() || 
+                                              await _authService.isSupervisor();
+                        if (!hasPermission) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('You do not have permission to create schedules'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          Navigator.pop(context);
+                          return;
+                        }
+
                         // Check if end time is after start time
                         final startMinutes =
                             startTime.hour * 60 + startTime.minute;
@@ -351,92 +477,6 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildScheduleContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppConstants.defaultPadding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _weekdays.map((day) {
-          final coursesForDay = _scheduleByDay[day] ?? [];
-          return _buildDaySchedule(day, coursesForDay);
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildDaySchedule(String day, List<Map<String, dynamic>> courses) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.blue.shade50,
-            width: double.infinity,
-            child: Text(
-              day,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          courses.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No classes scheduled'),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: courses.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final course = courses[index];
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 100,
-                            child: Text(
-                              '${course['start_time']} - ${course['end_time']}',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  course['course_title'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Room: ${course['room']}${course['building']?.isNotEmpty ?? false ? ', ${course['building']}' : ''}',
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-        ],
-      ),
     );
   }
 }

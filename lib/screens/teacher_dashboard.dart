@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../constants/app_constants.dart';
 import '../screens/teacher_schedule_screen.dart';
-import '../utils/routing_diagnostics.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -132,30 +131,13 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         'My Courses',
                         Icons.book,
                         Colors.indigo,
-                        () async {
-                          print('DEBUG: Teacher dashboard - My Courses clicked');
-                          // Run diagnostics before navigation
-                          await RoutingDiagnostics.logRouteDiagnostics('/teacher_courses', context);
-                          Navigator.pushNamed(context, '/teacher_courses');
-                        },
+                        () => Navigator.pushNamed(context, '/manage_courses'),
                       ),
                       _buildDashboardCard(
                         'Student Grades',
                         Icons.grade,
                         Colors.orange.shade700,
-                        () async {
-                          print('DEBUG: Teacher dashboard - Student Grades clicked');
-                          // Run diagnostics before navigation
-                          await RoutingDiagnostics.logRouteDiagnostics('/teacher_grades', context);
-                          // TODO: Create a proper TeacherGradesScreen and use that route
-                          // For now, show a message about the feature
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Student grades feature coming soon!'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
+                        () => Navigator.pushNamed(context, '/teacher_grades'),
                       ),
                       _buildDashboardCard(
                         'Schedule',
@@ -229,6 +211,11 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 ],
               ),
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, '/create_course'),
+        tooltip: 'Create Course',
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
