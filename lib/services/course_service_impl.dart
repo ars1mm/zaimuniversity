@@ -10,7 +10,6 @@ class CourseServiceImpl extends BaseService {
   final RoleService _roleService = RoleService();
 
   /// Retrieves all courses from the database
-  @override
   Future<List<Map<String, dynamic>>> getCourses() async {
     _logger.info('Fetching all courses');
 

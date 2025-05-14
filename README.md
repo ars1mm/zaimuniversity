@@ -11,6 +11,7 @@ This application provides a digital Campus Information System for Istanbul Zaim 
 - **Campus Resources**: Access to university news, events, and announcements
 - **Student Information**: Personal academic records and profile management
 - **Advisor Communication**: Direct contact with academic advisors
+- **Teacher Schedule**: Interactive calendar view for faculty to manage their teaching schedules (with RLS policy fix)
 - **Cross-Platform Support**: Built with Flutter, the app runs on both Android and iOS
 - **Responsive Design**: Optimized for both phone and tablet interfaces
 
@@ -191,8 +192,18 @@ If you encounter any issues, consider the following steps:
 - Ensure you have the latest version of Flutter installed
 - Check the project's dependencies in `pubspec.yaml` and update them if necessary
 - Review the error logs for specific details and search for solutions in the [Flutter Documentation](https://flutter.dev/docs)
+- For Supabase storage-related issues (particularly the "admin_ensure_bucket_exists" error), see our [Storage Troubleshooting Guide](lib/docs/supabase_storage_troubleshooting.md)
 
 For further assistance, feel free to open an issue in the repository.
+
+### Developer Resources
+
+The following troubleshooting guides are available for common issues:
+
+- **Supabase Storage Issues**: See [Supabase Storage Troubleshooting](lib/docs/supabase_storage_troubleshooting.md) for solutions to storage-related problems.
+- **Teacher Schedule Issues**: See [Teacher Schedule Troubleshooting](lib/docs/teacher_schedule_troubleshooting.md) for solutions to schedule-related problems.
+
+For additional documentation, check the complete guides in the [docs directory](lib/docs/).
 
 ### Architecture
 
@@ -278,3 +289,10 @@ This is not an open-source project. Any unauthorized use may be subject to legal
 ### Acknowledgements
 
 Special thanks to the Faculty of Computer Science at Istanbul Zaim University for their guidance and support throughout the development of this application.
+
+### Recent Updates
+
+#### May 14, 2025
+- **Fixed Teacher Schedule SQL Error**: Corrected the RLS policies in the teacher schedule schema that were referencing a non-existent column `user_id`. The policies now correctly reference the `id` column in the users table.
+- **Fixed Teacher Profile Query**: Fixed the teacher schedule service to use `id` instead of `user_id` when querying for teacher profiles, matching the actual database structure.
+- **Updated Troubleshooting Documentation**: Enhanced the teacher schedule troubleshooting guide with information about column reference errors and their solutions.

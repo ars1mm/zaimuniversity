@@ -19,7 +19,13 @@ class AuthService extends BaseService {
         _logger.warning('No authenticated user found', tag: _tag);
         return null;
       }
-      return user['role'] as String?;
+
+      // Add explicit logging to debug the role value
+      final role = user['role'] as String?;
+      _logger.debug('Retrieved role from database: "$role"', tag: _tag);
+
+      // Ensure we return the exact role string from the database
+      return role;
     } catch (e, stackTrace) {
       _logger.error('Error getting user role',
           tag: _tag, error: e, stackTrace: stackTrace);

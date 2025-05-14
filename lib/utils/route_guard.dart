@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../screens/login_screen.dart';
+import '../screens/teacher_schedule_screen.dart';
 
 /// A utility class that protects routes based on user roles
 class RouteGuard {
@@ -11,8 +12,11 @@ class RouteGuard {
   static Future<Widget> protectRoute({
     required Widget targetWidget,
     required BuildContext context,
-    List<String> allowedRoles = const ['admin'],
+    required List<String> allowedRoles,
   }) async {
+    print('DEBUG ROUTE GUARD: Called for widget: ${targetWidget.runtimeType}');
+    print('DEBUG ROUTE GUARD: Allowed roles: $allowedRoles');
+
     // Check if user is logged in
     final isLoggedIn = await _authService.isLoggedIn();
     if (!isLoggedIn) {
@@ -30,17 +34,32 @@ class RouteGuard {
         ),
       );
       return const LoginScreen();
-    }    // Check if user role is allowed
-    final hasAccess = allowedRoles.contains(userRole.toLowerCase());
-    print('Role check: User role=$userRole, Allowed roles=$allowedRoles, Has access=$hasAccess'); // Debug log
-    
+    } // Check if user role is allowed
+    // Convert user role to lowercase for case-insensitive comparison
+    final userRoleLower = userRole.toLowerCase();
+    // Convert all allowed roles to lowercase for case-insensitive comparison
+    final allowedRolesLower = allowedRoles
+        .map((role) => role.toLowerCase())
+        .toList(); // Always allow teacher role for teacher schedule screen as a hard override
+    if (userRoleLower == 'teacher' && targetWidget is TeacherScheduleScreen) {
+      print(
+          'DEBUG OVERRIDE: Teacher accessing Teacher Schedule Screen - ALLOWING ACCESS');
+      return targetWidget;
+    }
+
+    final hasAccess = allowedRolesLower.contains(userRoleLower);
+
+    print(
+        'Role check: User role=$userRole (lowercase: $userRoleLower), Allowed roles=$allowedRoles (lowercase: $allowedRolesLower), Has access=$hasAccess'); // More detailed debug log
+
     if (hasAccess) {
       return targetWidget;
     } else {
       // User doesn't have access, show unauthorized page or snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Access denied. Your role ($userRole) does not have permission to access this page.'),
+          content: Text(
+              'Access denied. Your role ($userRole) does not have permission to access this page.'),
           backgroundColor: Colors.red,
         ),
       );
