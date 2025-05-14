@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import '../constants/app_constants.dart';
 import '../services/auth_service.dart';
 import 'package:logging/logging.dart';
-import '../utils/storage_rls_helper.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   static const String routeName = '/profile_management';
@@ -184,15 +183,11 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             .limit(1)
             .single();
 
-        if (response != null) {
-          setState(() {
-            _users = [response];
-            _isLoading = false;
-          });
-        } else {
-          throw Exception('Failed to load user profile');
-        }
-        return;
+        setState(() {
+          _users = [response];
+          _isLoading = false;
+        });
+              return;
       }
 
       // For admins, load all users
@@ -388,8 +383,8 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
         }
       } catch (storageError) {
         _logger.severe('Error in storage operations: $storageError');
-        throw storageError; // Re-throw to be caught by the outer catch
-      }
+        rethrow; // Rethrow to handle in outer catch
+      };
     } catch (e) {
       _logger.severe('Error updating profile picture', e);
 

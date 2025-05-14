@@ -27,6 +27,26 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: "^0.14.3"
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path_android: "assets/app_icons/playstore.png"
+  image_path_ios: "assets/app_icons/appstore.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "path/to/image.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "path/to/image.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "path/to/image.png"
 
 flutter:
   uses-material-design: true
@@ -34,6 +54,10 @@ flutter:
     - ./.env
     - env/.env
     - assets/images/
+    - assets/app_icons/appstore.png
+    - assets/app_icons/playstore.png
+    - assets/app_icons/android/
+    - assets/app_icons/Assets.xcassets/
 
 dependency_overrides:
   async: ^2.13.0
