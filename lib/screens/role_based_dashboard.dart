@@ -184,13 +184,15 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'title': 'My Courses',
             'icon': Icons.book,
             'color': Colors.indigo,
-            'route': '/manage_courses',
+            'route':
+                '/teacher_courses', // Updated to teacher courses route instead of manage_courses
           },
           {
             'title': 'Student Grades',
             'icon': Icons.grade,
             'color': Colors.orange.shade700,
-            'route': '/admin', // Placeholder - will need implementation
+            'route':
+                '/teacher_grades', // Updated to correct teacher grades route
           },
           {
             'title': 'Schedule',
@@ -210,11 +212,13 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
       default:
         dashboardTitle = 'Student Dashboard';
         primaryColor = Colors.blue;
-        menuItems = [          {
+        menuItems = [
+          {
             'title': 'My Schedule',
             'icon': Icons.calendar_today,
             'color': Colors.blue.shade700,
-            'route': '/student_schedule', // Updated to use the student schedule route
+            'route':
+                '/student_schedule', // Updated to use the student schedule route
           },
           {
             'title': 'My Courses',

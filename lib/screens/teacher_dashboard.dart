@@ -131,7 +131,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         'My Courses',
                         Icons.book,
                         Colors.indigo,
-                        () => Navigator.pushNamed(context, '/manage_courses'),
+                        () => Navigator.pushNamed(context, '/teacher_courses'),
                       ),
                       _buildDashboardCard(
                         'Student Grades',
