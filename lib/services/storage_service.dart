@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import './auth_service.dart';
 import 'logger_service.dart';
 
@@ -12,9 +11,9 @@ class StorageService {
   final _logger = LoggerService.getLoggerForName('StorageService');
   static const String _tag = 'StorageService';
 
-  // Use storage URL from environment variables
-  final String _storageUrl = dotenv.env['SUPABASE_STORAGE_URL'] ??
-      'https://uvurktstrcbcqzzuupeq.supabase.co/storage/v1/s3';
+  // // Use storage URL from environment variables
+  // final String _storageUrl = dotenv.env['SUPABASE_STORAGE_URL'] ??
+  //     'https://uvurktstrcbcqzzuupeq.supabase.co/storage/v1/s3';
   // The bucket where user profile pictures will be stored
   static const String profileBucket = 'profile-images';
 

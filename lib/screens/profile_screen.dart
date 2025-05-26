@@ -25,18 +25,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       // Get the current authenticated user data safely
       final user = await _authService.getCurrentUser();
+      if (user == null) {
+        return;
+      }
 
-      if (user != null && mounted) {
+      if (mounted) {
         // Make sure we have a valid user object with required fields
         setState(() {
           _userData = user;
 
           // Set default values for any potentially missing fields to prevent null errors
-          if (_userData!['full_name'] == null) _userData!['full_name'] = 'User';
-          if (_userData!['email'] == null)
+          if (_userData!['full_name'] == null) {
+            _userData!['full_name'] = 'User';
+          }
+          if (_userData!['email'] == null) {
             _userData!['email'] = 'No email provided';
-          if (_userData!['role'] == null) _userData!['role'] = 'unknown';
-          if (_userData!['status'] == null) _userData!['status'] = 'Active';
+          }
+          if (_userData!['role'] == null) {
+            _userData!['role'] = 'unknown';
+          }
+          if (_userData!['status'] == null) {
+            _userData!['status'] = 'Active';
+          }
         });
       }
     } catch (e) {

@@ -84,7 +84,17 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   Future<void> _addStudent() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(
+        () => _isLoading = true); // Save current admin data before proceeding
+    final adminEmail = supabase.auth.currentUser?.email;
+    // Make adminRefreshToken non-nullable by providing a default empty string
+    // we'll check if it's empty before using it
+    String adminRefreshToken = '';
+
+    if (supabase.auth.currentSession != null) {
+      adminRefreshToken = supabase.auth.currentSession!.refreshToken ?? '';
+      _logger.info('Stored admin credentials for later restoration');
+    }
 
     try {
       // Variable to store the user ID (needs to be late to handle initialization in catch blocks)
@@ -164,29 +174,39 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
           // If it's not a user already exists error, rethrow
           rethrow;
         }
-      }      // Get the password hash from the auth.users table
+      }
+
+      // Get the password hash from the auth.users table
       final authUserResponse =
           await supabase.rpc('get_auth_user_hash', params: {'user_id': userId});
 
       // Check if we got the hash
       String? passwordHash;
       if (authUserResponse != null && authUserResponse.isNotEmpty) {
-        passwordHash = authUserResponse[0]['encrypted_password'];
+        // Ensure password hash is stored as a string
+        var encryptedPassword = authUserResponse[0]['encrypted_password'];
+        passwordHash = encryptedPassword?.toString();
       }
 
       // Check if we need to add or update the user record
       if (isNewUser) {
         // Create new user record in the users table with the password hash
-        await supabase.from(AppConstants.tableUsers).insert({
+        final userData = {
           'id': userId, // Use the ID from the auth user
           'email': _emailController.text,
           'full_name': _nameController.text,
           'role': AppConstants.roleStudent,
           'status': _selectedStatus,
-          'password_hash': passwordHash, // Include the password hash
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
-        });
+        };
+
+        // Only add password_hash if it's not null
+        if (passwordHash != null) {
+          userData['password_hash'] = passwordHash;
+        }
+
+        await supabase.from(AppConstants.tableUsers).insert(userData);
       } else {
         // Check if user exists in the users table first
         final List<dynamic> existingUsers = await supabase
@@ -194,19 +214,25 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
             .select('id')
             .eq('id', userId)
             .limit(1);
-            
+
         if (existingUsers.isEmpty) {
           // Create the missing user record
-          await supabase.from(AppConstants.tableUsers).insert({
+          final userData = {
             'id': userId,
             'email': _emailController.text,
             'full_name': _nameController.text,
             'role': AppConstants.roleStudent,
             'status': _selectedStatus,
-            'password_hash': passwordHash,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
-          });
+          };
+
+          // Only add password_hash if it's not null
+          if (passwordHash != null) {
+            userData['password_hash'] = passwordHash;
+          }
+
+          await supabase.from(AppConstants.tableUsers).insert(userData);
         } else {
           // Optionally update the existing user record if needed
           await supabase.from(AppConstants.tableUsers).update({
@@ -230,7 +256,53 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
         'enrollment_date': DateTime.now().toIso8601String(),
         'academic_standing': _selectedAcademicStanding,
         'preferences': {},
-      });
+      }); // Sign out to prevent being logged in as the newly created student
+      await supabase.auth.signOut();
+      // Restore admin session if we had a refresh token
+      if (adminRefreshToken.isNotEmpty) {
+        try {
+          // Attempt to restore admin session with the stored refresh token          // For Supabase v2.0.0, use setSession for manually setting a session from a stored refresh token
+          // We've already checked that adminRefreshToken is not empty
+          await supabase.auth.setSession(adminRefreshToken);
+          _logger.info('Admin session restored successfully');
+
+          // Verify if we're logged in as admin again
+          final currentUser = supabase.auth.currentUser;
+          if (currentUser?.email == adminEmail) {
+            _logger.info('Admin session verified successfully');
+          }
+        } catch (e) {
+          _logger.severe('Failed to restore admin session: $e');
+          if (adminEmail != null) {
+            _logger.info(
+                'Admin session restore failed, will need to log in again');
+            // Show a message that the admin needs to log in again
+            if (mounted) {
+              // Show login message after the success message
+              Future.delayed(const Duration(seconds: 3), () {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                        'Session changed. Please log in again as admin to continue.',
+                      ),
+                      backgroundColor: Colors.orange,
+                      duration: const Duration(seconds: 8),
+                      action: SnackBarAction(
+                        label: 'Login',
+                        onPressed: () {
+                          // Navigate to login screen
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        },
+                      ),
+                    ),
+                  );
+                }
+              });
+            }
+          }
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

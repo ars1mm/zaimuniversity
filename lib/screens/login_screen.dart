@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../constants/app_constants.dart';
 import 'role_based_dashboard.dart';
+import '../services/logger_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  final _logger = LoggerService.getLoggerForName('LoginScreen');
   bool _isLoading = false;
   bool _passwordVisible = false;
   final _formKey = GlobalKey<FormState>();
@@ -32,13 +34,21 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final success = await _authService.login(
+      final result = await _authService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      if (success && mounted) {
-        // Check user role and navigate accordingly
-        final userRole = await _authService.getUserRole();
+
+      _logger.fine('Login result = $result');
+
+      if (result['success'] == true && mounted) {
+        // Get user role from login result or fetch it separately
+        String? userRole = result['role']
+            as String?; // If no role in result, fetch it explicitly
+        userRole ??= await _authService.getUserRole();
+
+        _logger.fine('User role = $userRole');
+
         if (!mounted) return;
 
         // Show appropriate welcome message based on role
@@ -50,9 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (_) =>
                 RoleBasedDashboard(userRole: userRole ?? 'student')));
       } else if (mounted) {
-        _showErrorSnackBar('Invalid email or password');
+        _showErrorSnackBar(result['message'] ?? 'Invalid email or password');
       }
     } catch (e) {
+      _logger.severe('Login error: $e');
       if (!mounted) return;
       _showErrorSnackBar('An error occurred. Please try again.');
     } finally {
@@ -87,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
           image: DecorationImage(
             image: AssetImage('assets/images/university_izu.png'),
             fit: BoxFit.cover,
-            opacity: 0.25, // Making image lighter as background
+            opacity: 0.7, // Making image lighter as background
           ),
         ),
         child: Center(
@@ -96,11 +107,12 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 400),
               padding: const EdgeInsets.all(AppConstants.defaultPadding),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white
+                    .withValues(alpha: 230, red: 255, green: 255, blue: 255),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     spreadRadius: 5,
                   )
@@ -117,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(

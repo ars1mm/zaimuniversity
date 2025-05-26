@@ -316,13 +316,6 @@ class SupabaseService extends BaseService {
     }
   }
 
-  // Helper function to check if an email follows Supabase's requirements
-  bool _isValidEmail(String email) {
-    // Basic email validation for Supabase compatibility
-    final regex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-    return regex.hasMatch(email) && email.length <= 255;
-  }
-
   // Helper method to verify if a user with the given ID exists in the users table
   Future<bool> _verifyUserExists(String userId) async {
     try {

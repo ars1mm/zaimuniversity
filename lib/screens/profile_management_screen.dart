@@ -6,12 +6,11 @@ import 'dart:typed_data';
 import '../constants/app_constants.dart';
 import '../services/auth_service.dart';
 import 'package:logging/logging.dart';
-import '../utils/storage_rls_helper.dart';
 
 class ProfileManagementScreen extends StatefulWidget {
   static const String routeName = '/profile_management';
 
-  const ProfileManagementScreen({Key? key}) : super(key: key);
+  const ProfileManagementScreen({super.key});
 
   @override
   State<ProfileManagementScreen> createState() =>
@@ -184,14 +183,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             .limit(1)
             .single();
 
-        if (response != null) {
-          setState(() {
-            _users = [response];
-            _isLoading = false;
-          });
-        } else {
-          throw Exception('Failed to load user profile');
-        }
+        setState(() {
+          _users = [response];
+          _isLoading = false;
+        });
         return;
       }
 
@@ -388,7 +383,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
         }
       } catch (storageError) {
         _logger.severe('Error in storage operations: $storageError');
-        throw storageError; // Re-throw to be caught by the outer catch
+        rethrow; // Rethrow to handle in outer catch
       }
     } catch (e) {
       _logger.severe('Error updating profile picture', e);
@@ -554,7 +549,13 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: badgeColor.withOpacity(0.2),
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withValues(
+                                            alpha: 128,
+                                            red: 0,
+                                            green: 0,
+                                            blue: 0),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(

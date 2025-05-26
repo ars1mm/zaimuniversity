@@ -89,13 +89,11 @@ class _CreateSupervisorScreenState extends State<CreateSupervisorScreen> {
     setState(() => _isLoading = true);
     // Save current admin data before proceeding
     final adminEmail = _supabase.auth.currentUser?.email;
-    final adminId = _supabase.auth.currentUser?.id;
+    //final adminId = _supabase.auth.currentUser?.id;
     String? adminRefreshToken;
-    String? adminAccessToken;
 
     if (_supabase.auth.currentSession != null) {
       adminRefreshToken = _supabase.auth.currentSession!.refreshToken;
-      adminAccessToken = _supabase.auth.currentSession!.accessToken;
       _logger.d('Stored admin credentials for later restoration');
     }
 

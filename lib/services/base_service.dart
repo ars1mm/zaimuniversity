@@ -17,12 +17,12 @@ abstract class BaseService {
   // Helper function to verify if a user exists
   Future<bool> verifyUserExists(String userId) async {
     try {
-      final response = await supabase
+      await supabase
           .from('users')
           .select()
           .eq('id', userId.toString())
           .single();
-      return response != null;
+      return true; // If no exception was thrown, user exists
     } catch (e, stackTrace) {
       _logger.severe(
           '[$_tag] Error verifying user existence: $userId', e, stackTrace);

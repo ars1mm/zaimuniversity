@@ -86,6 +86,17 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
 
     setState(() => _isLoading = true);
 
+    // Save current admin data before proceeding
+    final adminEmail = supabase.auth.currentUser?.email;
+    // Make adminRefreshToken non-nullable by providing a default empty string
+    // we'll check if it's empty before using it
+    String adminRefreshToken = '';
+
+    if (supabase.auth.currentSession != null) {
+      adminRefreshToken = supabase.auth.currentSession!.refreshToken ?? '';
+      _logger.info('Stored admin credentials for later restoration');
+    }
+
     try {
       // Variable to store the user ID (needs to be late to handle initialization in catch blocks)
       late String userId;
@@ -167,28 +178,34 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
       }
 
       // Get the password hash from the auth.users table
-      final authUserResponse =
-          await supabase.rpc('get_auth_user_hash', params: {'user_id': userId});
-
-      // Check if we got the hash
+      final authUserResponse = await supabase.rpc('get_auth_user_hash',
+          params: {'user_id': userId}); // Check if we got the hash
       String? passwordHash;
       if (authUserResponse != null && authUserResponse.isNotEmpty) {
-        passwordHash = authUserResponse[0]['encrypted_password'];
+        // Ensure password hash is stored as a string
+        var encryptedPassword = authUserResponse[0]['encrypted_password'];
+        passwordHash = encryptedPassword?.toString();
       }
 
       // Check if we need to add or update the user record
       if (isNewUser) {
         // Create new user record in the users table with the password hash
-        await supabase.from(AppConstants.tableUsers).insert({
+        final userData = {
           'id': userId, // Use the ID from the auth user
           'email': _emailController.text,
           'full_name': _nameController.text,
           'role': AppConstants.roleTeacher,
           'status': _selectedStatus,
-          'password_hash': passwordHash, // Include the password hash
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
-        });
+        };
+
+        // Only add password_hash if it's not null
+        if (passwordHash != null) {
+          userData['password_hash'] = passwordHash;
+        }
+
+        await supabase.from(AppConstants.tableUsers).insert(userData);
       } else {
         // Check if user exists in the users table first
         final List<dynamic> existingUsers = await supabase
@@ -196,19 +213,24 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
             .select('id')
             .eq('id', userId)
             .limit(1);
-
         if (existingUsers.isEmpty) {
           // Create the missing user record
-          await supabase.from(AppConstants.tableUsers).insert({
+          final userData = {
             'id': userId,
             'email': _emailController.text,
             'full_name': _nameController.text,
             'role': AppConstants.roleTeacher,
             'status': _selectedStatus,
-            'password_hash': passwordHash,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
-          });
+          };
+
+          // Only add password_hash if it's not null
+          if (passwordHash != null) {
+            userData['password_hash'] = passwordHash;
+          }
+
+          await supabase.from(AppConstants.tableUsers).insert(userData);
         } else {
           // Optionally update the existing user record if needed
           await supabase.from(AppConstants.tableUsers).update({
@@ -220,17 +242,46 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
         }
       }
 
-      // Now create the teacher record with the same userId
-      await supabase.from(AppConstants.tableTeachers).insert({
-        'id': userId, // Use the ID from the auth user
+      // Sign out to prevent being logged in as the newly created teacher
+      await supabase.auth.signOut();
+
+      // Restore admin session if we had a refresh token
+      if (adminRefreshToken.isNotEmpty) {
+        try {
+          // Attempt to restore admin session with the stored refresh token
+          // For Supabase v2.0.0, use setSession for manually setting a session from a stored refresh token
+          await supabase.auth.setSession(adminRefreshToken);
+          _logger.info('Admin session restored successfully');
+
+          // Verify if we're logged in as admin again
+          final currentUser = supabase.auth.currentUser;
+          if (currentUser?.email == adminEmail) {
+            _logger.info('Admin session verified successfully');
+          }
+        } catch (e) {
+          _logger.severe('Failed to restore admin session: $e');
+          throw Exception(
+              'Admin session restoration failed. Cannot create teacher record.');
+        }
+      } else {
+        throw Exception(
+            'No admin session token found. Cannot create teacher record.');
+      }
+
+      // Now create the teacher record with admin privileges by using the admin_insert_teacher RPC function
+      final contactInfo = {
+        'email': _emailController.text,
+        'phone': _phoneController.text,
+      };
+
+      // Call the admin function that bypasses RLS
+      await supabase.rpc('admin_insert_teacher', params: {
+        'teacher_id': userId,
         'department_id': _departmentController.text,
         'specialization': _specializationController.text,
         'bio': _bioController.text,
         'status': _selectedStatus,
-        'contact_info': {
-          'email': _emailController.text,
-          'phone': _phoneController.text,
-        },
+        'contact_info': contactInfo
       });
 
       // Bypass RLS by using an RPC function for storage operations

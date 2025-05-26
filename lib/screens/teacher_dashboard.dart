@@ -130,7 +130,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         'My Courses',
                         Icons.book,
                         Colors.indigo,
-                        () => Navigator.pushNamed(context, '/manage_courses'),
+                        () => Navigator.pushNamed(context, '/teacher_courses'),
                       ),
                       _buildDashboardCard(
                         'Student Grades',
@@ -142,7 +142,11 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         'Schedule',
                         Icons.calendar_today,
                         Colors.green.shade700,
-                        () => Navigator.pushNamed(context, '/teacher_schedule'),
+                        () {
+                          // Try with the direct string value, not the constant, to verify
+                          final routeName = '/teacher_schedule';
+                          Navigator.pushNamed(context, routeName);
+                        },
                       ),
                       _buildDashboardCard(
                         'Profile',

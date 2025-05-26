@@ -61,6 +61,18 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         primaryColor = Colors.red;
         menuItems = [
           {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
+          {
+            'title': 'Course Enrollments',
+            'icon': Icons.how_to_reg,
+            'color': Colors.amber.shade800,
+            'route': '/course_enrollments',
+          },
+          {
             'title': 'Manage Students',
             'icon': Icons.school,
             'color': Colors.blue.shade800,
@@ -139,6 +151,18 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         primaryColor = Colors.teal;
         menuItems = [
           {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
+          {
+            'title': 'Course Enrollments',
+            'icon': Icons.how_to_reg,
+            'color': Colors.amber.shade800,
+            'route': '/course_enrollments',
+          },
+          {
             'title': 'Manage Students',
             'icon': Icons.school,
             'color': Colors.blue.shade800,
@@ -181,22 +205,30 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         primaryColor = Colors.blue;
         menuItems = [
           {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
+          {
             'title': 'My Courses',
             'icon': Icons.book,
             'color': Colors.indigo,
-            'route': '/manage_courses',
+            'route':
+                '/teacher_courses', // Updated to teacher courses route instead of manage_courses
           },
           {
             'title': 'Student Grades',
             'icon': Icons.grade,
             'color': Colors.orange.shade700,
-            'route': '/admin', // Placeholder - will need implementation
+            'route':
+                '/teacher_grades', // Updated to correct teacher grades route
           },
           {
             'title': 'Schedule',
             'icon': Icons.calendar_today,
             'color': Colors.green.shade700,
-            'route': '/admin', // Placeholder - will need implementation
+            'route': '/teacher_schedule', // Updated to correct route
           },
           {
             'title': 'My Profile',
@@ -212,10 +244,17 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         primaryColor = Colors.blue;
         menuItems = [
           {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
+          {
             'title': 'My Schedule',
             'icon': Icons.calendar_today,
             'color': Colors.blue.shade700,
-            'route': '/admin', // Placeholder - will need implementation
+            'route':
+                '/student_schedule', // Updated to use the student schedule route
           },
           {
             'title': 'My Courses',
@@ -243,8 +282,19 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         title: Text(dashboardTitle),
         backgroundColor: primaryColor,
         actions: [
+          if (widget.userRole == 'admin' || widget.userRole == 'supervisor')
+            IconButton(
+              icon: const Icon(Icons.add_alert),
+              onPressed: () => Navigator.pushNamed(context, '/announcements'),
+              tooltip: 'Manage Announcements',
+            ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.person),
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
+            tooltip: 'Profile',
+          ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
             onPressed: _logout,
             tooltip: 'Logout',
           ),
@@ -297,6 +347,14 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
                   ),
                 ],
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.announcement),
+              title: const Text('Announcements'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.pushNamed(context, '/announcements');
+              },
             ),
             ...menuItems.map((item) => ListTile(
                   leading: Icon(

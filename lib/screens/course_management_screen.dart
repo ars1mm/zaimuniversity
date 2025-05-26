@@ -3,7 +3,6 @@ import '../constants/app_constants.dart';
 import '../services/course_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logger/logger.dart';
-
 class CourseManagementScreen extends StatefulWidget {
   const CourseManagementScreen({super.key});
 
@@ -25,7 +24,6 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
   final _departmentController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _searchCodeController = TextEditingController();
-  String _selectedDepartmentId = '';
   final _logger = Logger();
 
   @override
@@ -115,7 +113,6 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     _creditController.clear();
     _departmentController.clear();
     _descriptionController.clear();
-    _selectedDepartmentId = '';
 
     await showDialog(
       context: context,
@@ -186,9 +183,18 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                   }).toList(),
                   onChanged: (value) {
                     setState(() {
-                      _selectedDepartmentId = value ?? '';
-                      _departmentController.text = _departments
-                          .firstWhere((dept) => dept['id'] == value)['name'];
+                      try {
+                        _departmentController.text = _departments
+                                .firstWhere(
+                                  (dept) => dept['id'] == value,
+                                  orElse: () => {'name': 'Unknown Department'},
+                                )['name']
+                                ?.toString() ??
+                            'Unknown Department';
+                      } catch (e) {
+                        _departmentController.text = 'Unknown Department';
+                        _logger.e('Error finding department: $e');
+                      }
                     });
                   },
                   validator: (value) {
@@ -264,220 +270,6 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     );
   }
 
-  void _showEditCourseDialog(int index) {
-    final course = _filteredCourses[index];
-
-    // Properly initialize all controllers with existing data
-    _courseNameController.text = course['title'] ?? '';
-    _courseCodeController.text = course['semester'] ?? '';
-    _creditController.text = (course['capacity'] ?? '0').toString();
-    _descriptionController.text = course['description'] ?? '';
-
-    // Find the correct department ID
-    _selectedDepartmentId = _departments
-        .firstWhere(
-          (dept) => dept['name'] == course['department'],
-          orElse: () => {'id': '', 'name': ''},
-        )['id']
-        .toString();
-
-    // Set the department controller text
-    _departmentController.text = course['department'] ?? '';
-
-    // Initialize status
-    String selectedStatus = course['status'] ?? 'active';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Course'),
-        content: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _courseCodeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Semester',
-                    hintText: 'e.g. Fall 2025',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a semester';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _courseNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Course Title',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a course title';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _creditController,
-                  decoration: const InputDecoration(
-                    labelText: 'Capacity',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter capacity';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Please enter a valid number';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Department',
-                    border: OutlineInputBorder(),
-                  ),
-                  value: _selectedDepartmentId.isNotEmpty
-                      ? _selectedDepartmentId
-                      : null,
-                  items: _departments.map((department) {
-                    return DropdownMenuItem<String>(
-                      value: department['id'].toString(),
-                      child: Text(department['name']?.toString() ??
-                          'Unknown Department'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedDepartmentId = value ?? '';
-                      if (value != null) {
-                        final dept = _departments.firstWhere(
-                          (d) => d['id'].toString() == value,
-                          orElse: () => {'name': 'Unknown Department'},
-                        );
-                        _departmentController.text = dept['name'];
-                      }
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a department';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    border: OutlineInputBorder(),
-                  ),
-                  value: selectedStatus,
-                  items: const [
-                    DropdownMenuItem<String>(
-                      value: 'active',
-                      child: Text('Active'),
-                    ),
-                    DropdownMenuItem<String>(
-                      value: 'pending',
-                      child: Text('Pending'),
-                    ),
-                    DropdownMenuItem<String>(
-                      value: 'rejected',
-                      child: Text('Rejected'),
-                    ),
-                    DropdownMenuItem<String>(
-                      value: 'completed',
-                      child: Text('Completed'),
-                    ),
-                    DropdownMenuItem<String>(
-                      value: 'cancelled',
-                      child: Text('Cancelled'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      selectedStatus = value ?? 'active';
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (_formKey.currentState!.validate()) {
-                Navigator.of(context).pop();
-                if (!mounted) return;
-
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                setState(() => _isLoading = true);
-                final result = await _courseService.updateCourse(
-                  id: course['id'],
-                  title: _courseNameController.text,
-                  capacity: int.parse(_creditController.text),
-                  department: _departmentController.text,
-                  description: _descriptionController.text,
-                  semester: _courseCodeController.text,
-                  status: selectedStatus,
-                );
-
-                if (!mounted) return;
-
-                setState(() => _isLoading = false);
-
-                if (result['success']) {
-                  _loadCourses();
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Course updated successfully'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content:
-                          Text('Failed to update course: ${result['message']}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Save Changes'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _confirmDeleteCourse(int index) {
     final course = _filteredCourses[index];
@@ -539,7 +331,39 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
     );
   }
 
+  // Navigate to edit course screen instead of using dialog
+  void _navigateToEditCourse(int index) {
+    final course = _filteredCourses[index];
 
+    // Process departments data before passing to next screen to avoid potential function handling issues
+    final processedCourse = Map<String, dynamic>.from(course);
+
+    // If departments is a function, try to evaluate it and store the result
+    if (processedCourse['departments'] is Function) {
+      try {
+        final departmentsFunc = processedCourse['departments'] as Function;
+        final departmentsData = departmentsFunc();
+        if (departmentsData is Map<String, dynamic>) {
+          processedCourse['departments'] = departmentsData;
+        } else {
+          processedCourse['departments'] = {};
+        }
+      } catch (e) {
+        _logger.e('Error processing department data: $e');
+        processedCourse['departments'] = {};
+      }
+    }
+
+    // We'll redirect to the ManageCoursesScreen for editing
+    // This is a temporary solution until the EditCourseScreen is implemented
+    Navigator.of(context).pushNamed(
+      '/manage_courses',
+      arguments: {'courseToEdit': processedCourse},
+    ).then((_) {
+      // Refresh data when returning from the edit screen
+      _loadCourses();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -644,7 +468,7 @@ class _CourseManagementScreenState extends State<CourseManagementScreen> {
                                     IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () =>
-                                          _showEditCourseDialog(index),
+                                          _navigateToEditCourse(index),
                                       color: Colors.blue,
                                       tooltip: 'Edit Course',
                                     ),
