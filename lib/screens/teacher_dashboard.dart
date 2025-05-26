@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../constants/app_constants.dart';
-import '../screens/teacher_schedule_screen.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -144,12 +143,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                         Icons.calendar_today,
                         Colors.green.shade700,
                         () {
-                          // Add debug log before navigation                          print('DEBUG: Teacher dashboard navigating to schedule screen');
-                          print(
-                              'DEBUG: Route name = ${TeacherScheduleScreen.routeName}');
                           // Try with the direct string value, not the constant, to verify
                           final routeName = '/teacher_schedule';
-                          print('DEBUG: Using direct string route: $routeName');
                           Navigator.pushNamed(context, routeName);
                         },
                       ),

@@ -182,4 +182,33 @@ class EnrollmentService {
       rethrow;
     }
   }
+
+  // Delete enrollment - remove a student from a course
+  Future<Map<String, dynamic>> deleteEnrollment({
+    required String enrollmentId,
+    required String courseId,
+    required String studentId,
+  }) async {
+    try {
+      _logger.i(
+          'Deleting enrollment $enrollmentId for student $studentId from course $courseId');
+
+      // Option 1: Direct deletion using Supabase
+      await _supabase
+          .from('course_enrollments')
+          .delete()
+          .eq('id', enrollmentId);
+
+      return {
+        'success': true,
+        'message': 'Student successfully unenrolled from course'
+      };
+    } catch (e) {
+      _logger.e('Error deleting enrollment: $e');
+      return {
+        'success': false,
+        'message': 'Error deleting enrollment: ${e.toString()}'
+      };
+    }
+  }
 }

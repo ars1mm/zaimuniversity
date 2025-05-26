@@ -13,25 +13,19 @@ class RoutingDiagnostics {
   /// Logs comprehensive routing diagnostics information
   static Future<void> logRouteDiagnostics(
       String routeName, BuildContext context) async {
-    print('');
-    print('===== ROUTING DIAGNOSTICS =====');
-    print('Route: $routeName');
-    print('Context mounted: ${context.mounted}');
-
     // Auth/user information
     final isLoggedIn = await _authService.isLoggedIn();
     final userRole = await _authService.getUserRole();
     final currentUser = supabase.auth.currentUser;
 
-    print('User logged in: $isLoggedIn');
-    print('User role: $userRole');
-    print('User ID: ${currentUser?.id}');
-    print('User email: ${currentUser?.email}');
+    _logger.info(isLoggedIn
+        ? 'User is logged in as: ${currentUser?.email ?? "Unknown"}'
+        : 'User is not logged in');
     // Route target
     if (routeName == TeacherCourseScreen.routeName) {
-      print('Target widget: TeacherCourseScreen');
+      _logger.info('Target widget: TeacherCourseScreen');
     } else {
-      print('Unknown route name: $routeName');
+      _logger.warning('Unknown route name: $routeName');
     }
 
     // Role checks
@@ -44,8 +38,8 @@ class RoutingDiagnostics {
         AppConstants.roleSupervisor.toLowerCase()
       ].contains(userRole.toLowerCase());
 
-      print('Is teacher: $isTeacher');
-      print('Can access teacher routes: $canAccessTeacherRoutes');
+      _logger.info('Is teacher: $isTeacher');
+      _logger.info('Can access teacher routes: $canAccessTeacherRoutes');
     }
 
     // Specific route checks
@@ -54,18 +48,18 @@ class RoutingDiagnostics {
       final isTeacher = await _authService.isTeacher();
       final isAdmin = await _authService.isAdmin();
       final isSupervisor = await _authService.isSupervisor();
-      print('User permissions:');
-      print('- Is teacher: $isTeacher');
-      print('- Is admin: $isAdmin');
-      print('- Is supervisor: $isSupervisor');
+      _logger.info('User permissions:');
+      _logger.info('- Is teacher: $isTeacher');
+      _logger.info('- Is admin: $isAdmin');
+      _logger.info('- Is supervisor: $isSupervisor');
 
       // Verify our route is accessible to current user
       final canAccessTeacherRoutes = isTeacher || isAdmin || isSupervisor;
-      print('Can access teacher routes: $canAccessTeacherRoutes');
+      _logger.info('Can access teacher routes: $canAccessTeacherRoutes');
 
       // Check if on the current navigation route map
       final routes = Navigator.of(context).widget.onGenerateRoute != null;
-      print('Has route generator: $routes');
+      _logger.info('Has route generator: $routes');
     }
 
     /// Add helper for diagnosing course routing issues
@@ -86,8 +80,5 @@ class RoutingDiagnostics {
         _logger.info('- Full name: ${userData['full_name']}');
       }
     }
-
-    print('==============================');
-    print('');
   }
 }

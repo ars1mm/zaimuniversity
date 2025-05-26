@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../widgets/custom_button.dart';
 import '../constants/app_constants.dart';
 import 'role_based_dashboard.dart';
+import '../services/logger_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  final _logger = LoggerService.getLoggerForName('LoginScreen');
   bool _isLoading = false;
   bool _passwordVisible = false;
   final _formKey = GlobalKey<FormState>();
@@ -37,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
 
-      print('DEBUG LOGIN: Login result = $result');
+      _logger.fine('Login result = $result');
 
       if (result['success'] == true && mounted) {
         // Get user role from login result or fetch it separately
@@ -45,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
             as String?; // If no role in result, fetch it explicitly
         userRole ??= await _authService.getUserRole();
 
-        print('DEBUG LOGIN: User role = $userRole');
+        _logger.fine('User role = $userRole');
 
         if (!mounted) return;
 
@@ -61,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _showErrorSnackBar(result['message'] ?? 'Invalid email or password');
       }
     } catch (e) {
-      print('DEBUG LOGIN ERROR: $e');
+      _logger.severe('Login error: $e');
       if (!mounted) return;
       _showErrorSnackBar('An error occurred. Please try again.');
     } finally {
@@ -96,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
           image: DecorationImage(
             image: AssetImage('assets/images/university_izu.png'),
             fit: BoxFit.cover,
-            opacity: 0.25, // Making image lighter as background
+            opacity: 0.7, // Making image lighter as background
           ),
         ),
         child: Center(
