@@ -17,3 +17,4 @@ export 'teacher_course_screen.dart';
 export 'teacher_grades_screen.dart';
 export 'user_profile_management_screen.dart';
 export 'profile_management_screen.dart';
+export 'enrollment_management_screen.dart';

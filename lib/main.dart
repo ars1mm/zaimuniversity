@@ -18,8 +18,9 @@ import 'screens/teacher_schedule_screen.dart';
 import 'screens/student_schedule_screen.dart';
 import 'screens/teacher_course_screen.dart';
 import 'screens/teacher_grades_screen.dart';
-import 'package:zaimuniversity/screens/user_profile_management_screen.dart';
+import 'screens/user_profile_management_screen.dart';
 import 'screens/profile_management_screen.dart';
+import 'screens/enrollment_management_screen.dart';
 import './services/logger_service.dart';
 import './utils/route_guard.dart';
 import './constants/app_constants.dart';
@@ -443,10 +444,26 @@ class CampusInfoSystemApp extends StatelessWidget {
                   return snapshot.data ?? const LoginScreen();
                 },
               ),
+            );          case '/course_enrollments':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const EnrollmentManagementScreen(),
+                  allowedRoles: ['admin', 'supervisor'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
             );
 
           case '/student_schedule':
-            // Add debug logs for student schedule route
+            // Add debug logs for student schedule route 
             print('DEBUG: Entering student schedule route case');
             print(
                 'DEBUG: Student roles from constants: ${AppConstants.studentRoles}');

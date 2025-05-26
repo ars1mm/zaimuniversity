@@ -58,8 +58,13 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
     switch (widget.userRole) {
       case 'admin':
         dashboardTitle = 'Admin Dashboard';
-        primaryColor = Colors.red;
-        menuItems = [
+        primaryColor = Colors.red;        menuItems = [
+          {
+            'title': 'Course Enrollments',
+            'icon': Icons.how_to_reg,
+            'color': Colors.amber.shade800,
+            'route': '/course_enrollments',
+          },
           {
             'title': 'Manage Students',
             'icon': Icons.school,
@@ -133,11 +138,16 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'route': '/profile',
           },
         ];
-        break;
-      case 'supervisor':
+        break;      case 'supervisor':
         dashboardTitle = 'Supervisor Dashboard';
         primaryColor = Colors.teal;
         menuItems = [
+          {
+            'title': 'Course Enrollments',
+            'icon': Icons.how_to_reg,
+            'color': Colors.amber.shade800,
+            'route': '/course_enrollments',
+          },
           {
             'title': 'Manage Students',
             'icon': Icons.school,
