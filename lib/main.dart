@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:logging/logging.dart';
+import 'package:logging/logging.dart' as logging;
 import 'screens/login_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/add_student_screen.dart';
@@ -26,12 +26,13 @@ import './services/logger_service.dart';
 import './utils/route_guard.dart';
 import './constants/app_constants.dart';
 import 'screens/supervisor_assignment_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize logging first for better debugging during startup
   await LoggerService.init(
-    logLevel: Level.ALL,
+    logLevel: logging.Level.ALL,
     enableFileLogging: true,
   );
 
@@ -91,20 +92,20 @@ class CampusInfoSystemApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      onGenerateRoute: (settings) {
+      initialRoute: '/',      onGenerateRoute: (settings) {
         // Enhanced logging for route debugging
-        print('DEBUG ROUTING: Requested route name is "${settings.name}"');
-        print('DEBUG ROUTING: Route name type: ${settings.name.runtimeType}');
+        final routeLogger = LoggerService.getLoggerForName('Routes');
+        routeLogger.fine('DEBUG ROUTING: Requested route name is "${settings.name}"');
+        routeLogger.fine('DEBUG ROUTING: Route name type: ${settings.name.runtimeType}');
 
         // Use RouteSettings to pass data to screens if needed
-        // Print all debug info for the route:
-        print(
+        // Log all debug info for the route:
+        routeLogger.fine(
             'DEBUG: Teacher schedule route constant = ${TeacherScheduleScreen.routeName}');
-        print('DEBUG: Current requested route = ${settings.name}');
-        print(
+        routeLogger.fine('DEBUG: Current requested route = ${settings.name}');
+        routeLogger.fine(
             'DEBUG: Do they match? ${settings.name == TeacherScheduleScreen.routeName}');
-        print(
+        routeLogger.fine(
             'DEBUG: Direct string comparison with "/teacher_schedule": ${settings.name == "/teacher_schedule"}');
 
         switch (settings.name) {
@@ -114,7 +115,7 @@ class CampusInfoSystemApp extends StatelessWidget {
                 builder: (_) => const LoginScreen()); // Admin-only routes
           case '/admin':
           case '/admin_dashboard':
-            print('DEBUG ROUTING: Admin route requested');
+            routeLogger.fine('DEBUG ROUTING: Admin route requested');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
                 future: RouteGuard.protectRoute(
@@ -122,17 +123,15 @@ class CampusInfoSystemApp extends StatelessWidget {
                   targetWidget: const AdminDashboard(),
                   allowedRoles: AppConstants.adminRoles,
                 ),
-                builder: (context, snapshot) {
-                  print(
+                builder: (context, snapshot) {                  routeLogger.fine(
                       'DEBUG ADMIN ROUTE: Future builder state = ${snapshot.connectionState}');
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
                   if (snapshot.hasError) {
-                    print('DEBUG ADMIN ROUTE ERROR: ${snapshot.error}');
-                  }
-                  print(
+                    routeLogger.warning('DEBUG ADMIN ROUTE ERROR: ${snapshot.error}');
+                  }                  routeLogger.fine(
                       'DEBUG ADMIN ROUTE: Returning widget = ${snapshot.data.runtimeType}');
                   return snapshot.data ?? const LoginScreen();
                 },
@@ -278,7 +277,8 @@ class CampusInfoSystemApp extends StatelessWidget {
                   }
                   return snapshot.data ?? const LoginScreen();
                 },
-              ),              );
+              ),
+            );
           case SupervisorAssignmentScreen.routeName:
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
@@ -384,8 +384,7 @@ class CampusInfoSystemApp extends StatelessWidget {
             );
           case '/teacher_schedule':
             // Add debug logs for teacher schedule route
-            print('DEBUG: Entering teacher schedule route case');
-            print(
+            routeLogger.fine('DEBUG: Entering teacher schedule route case');            routeLogger.fine(
                 'DEBUG: Teacher roles from constants: ${AppConstants.roleTeacher}, ${AppConstants.roleAdmin}, ${AppConstants.roleSupervisor}');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
@@ -409,8 +408,8 @@ class CampusInfoSystemApp extends StatelessWidget {
             );
           case '/teacher_courses':
             // Add debug logs for teacher courses route
-            print('DEBUG: Entering teacher courses route case');
-            print(
+            routeLogger.info('DEBUG: Entering teacher courses route case');
+            routeLogger.info(
                 'DEBUG: Teacher roles from constants: ${AppConstants.roleTeacher}, ${AppConstants.roleSupervisor}, ${AppConstants.roleAdmin}');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
@@ -424,17 +423,17 @@ class CampusInfoSystemApp extends StatelessWidget {
                   ],
                 ),
                 builder: (context, snapshot) {
-                  print(
+                    routeLogger.info(
                       'DEBUG: Teacher courses FutureBuilder, snapshot state: ${snapshot.connectionState}');
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Scaffold(
                         body: Center(child: CircularProgressIndicator()));
                   }
                   if (snapshot.hasError) {
-                    print(
+                    routeLogger.severe(
                         'DEBUG: Error in teacher courses FutureBuilder: ${snapshot.error}');
                   }
-                  print(
+                  routeLogger.info(
                       'DEBUG: Teacher courses widget to return: ${snapshot.data?.runtimeType ?? "LoginScreen (fallback)"}');
                   return snapshot.data ?? const LoginScreen();
                 },
@@ -443,7 +442,7 @@ class CampusInfoSystemApp extends StatelessWidget {
 
           case '/teacher_grades':
             // Route for teacher grades functionality
-            print('DEBUG: Entering teacher grades route case');
+            routeLogger.info('DEBUG: Entering teacher grades route case');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
                 future: RouteGuard.protectRoute(
@@ -463,7 +462,8 @@ class CampusInfoSystemApp extends StatelessWidget {
                   return snapshot.data ?? const LoginScreen();
                 },
               ),
-            );          case '/course_enrollments':
+            );
+          case '/course_enrollments':
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
                 future: RouteGuard.protectRoute(
@@ -482,9 +482,9 @@ class CampusInfoSystemApp extends StatelessWidget {
             );
 
           case '/student_schedule':
-            // Add debug logs for student schedule route 
-            print('DEBUG: Entering student schedule route case');
-            print(
+            // Add debug logs for student schedule route
+            routeLogger.info('DEBUG: Entering student schedule route case');
+            routeLogger.info(
                 'DEBUG: Student roles from constants: ${AppConstants.studentRoles}');
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(

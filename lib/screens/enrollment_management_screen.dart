@@ -24,7 +24,6 @@ class _EnrollmentManagementScreenState
   List<Map<String, dynamic>> _courses = [];
   bool _isLoading = true;
   String _userRole = '';
-  String _userId = '';
   String? _selectedCourseId;
 
   @override
@@ -43,7 +42,6 @@ class _EnrollmentManagementScreenState
       }
       setState(() {
         _userRole = role;
-        _userId = userId;
       });
       await _loadEnrollments();
     } catch (e) {

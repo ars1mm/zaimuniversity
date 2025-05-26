@@ -117,6 +117,15 @@ class _CourseEnrollmentsScreenState extends State<CourseEnrollmentsScreen> {
                 _withdrawStudent(enrollment);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.delete_forever, color: Colors.red),
+              title: const Text('Remove Enrollment',
+                  style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteEnrollment(enrollment);
+              },
+            ),
           ],
         ],
       ),
@@ -244,6 +253,56 @@ class _CourseEnrollmentsScreenState extends State<CourseEnrollmentsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error withdrawing student: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteEnrollment(Map<String, dynamic> enrollment) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Enrollment',
+            style: TextStyle(color: Colors.red)),
+        content: Text(
+            'Are you sure you want to completely remove ${enrollment['student']['full_name']}\'s enrollment from this course? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final result = await _enrollmentService.deleteEnrollment(
+          enrollmentId: enrollment['id'],
+          courseId: widget.courseId,
+          studentId: enrollment['student']['id'],
+        );
+
+        if (result['success']) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result['message'])),
+            );
+          }
+          await _loadEnrollments();
+        } else {
+          throw Exception(result['message']);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error removing enrollment: $e')),
           );
         }
       }

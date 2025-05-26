@@ -35,7 +35,6 @@ class _DepartmentManagementScreenState
     _descriptionController.dispose();
     super.dispose();
   }
-
   Future<void> _loadDepartments() async {
     setState(() {
       _isLoading = true;
@@ -57,9 +56,11 @@ class _DepartmentManagementScreenState
       _logger.severe('Error loading departments', e);
       if (!mounted) return;
 
+      // Use local variable to avoid BuildContext across async gap
+      final errorMessage = 'Error loading departments: ${e.toString()}';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading departments: ${e.toString()}'),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
         ),
       );
@@ -80,7 +81,6 @@ class _DepartmentManagementScreenState
           dept['description'].toString().toLowerCase().contains(query);
     }).toList();
   }
-
   Future<void> _showAddDepartmentDialog() async {
     _nameController.clear();
     _descriptionController.clear();
@@ -129,13 +129,18 @@ class _DepartmentManagementScreenState
           FilledButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
+                // Store form values in local variables
+                final deptName = _nameController.text;
+                final deptDescription = _descriptionController.text;
+                
                 Navigator.of(context).pop();
+                
                 setState(() => _isLoading = true);
 
                 try {
                   await supabase.from(AppConstants.tableDepartments).insert({
-                    'name': _nameController.text,
-                    'description': _descriptionController.text,
+                    'name': deptName,
+                    'description': deptDescription,
                     'created_at': DateTime.now().toIso8601String(),
                     'updated_at': DateTime.now().toIso8601String(),
                   });
@@ -143,8 +148,7 @@ class _DepartmentManagementScreenState
                   if (!mounted) return;
 
                   _loadDepartments();
-
-                  if (!mounted) return;
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Department added successfully'),
@@ -153,11 +157,11 @@ class _DepartmentManagementScreenState
                   );
                 } catch (e) {
                   if (!mounted) return;
-
+                  
+                  final errorMessage = 'Failed to add department: ${e.toString()}';
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content:
-                          Text('Failed to add department: ${e.toString()}'),
+                      content: Text(errorMessage),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -174,7 +178,6 @@ class _DepartmentManagementScreenState
       ),
     );
   }
-
   void _showEditDepartmentDialog(int index) {
     final department = _filteredDepartments[index];
     _nameController.text = department['name'];
@@ -222,23 +225,26 @@ class _DepartmentManagementScreenState
           FilledButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
+                // Store form values in local variables
+                final deptName = _nameController.text;
+                final deptDescription = _descriptionController.text;
+                final deptId = department['id'].toString();
+
                 Navigator.of(context).pop();
                 setState(() => _isLoading = true);
 
                 try {
                   await supabase.from(AppConstants.tableDepartments).update({
-                    'name': _nameController.text,
-                    'description': _descriptionController.text,
+                    'name': deptName,
+                    'description': deptDescription,
                     'updated_at': DateTime.now().toIso8601String(),
-                  }).eq('id', department['id'].toString());
+                  }).eq('id', deptId);
 
                   if (!mounted) return;
 
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
                   _loadDepartments();
 
-                  scaffoldMessenger.showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Department updated successfully'),
                       backgroundColor: Colors.green,
@@ -247,10 +253,10 @@ class _DepartmentManagementScreenState
                 } catch (e) {
                   if (!mounted) return;
 
+                  final errorMessage = 'Failed to update department: ${e.toString()}';
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content:
-                          Text('Failed to update department: ${e.toString()}'),
+                      content: Text(errorMessage),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -267,61 +273,62 @@ class _DepartmentManagementScreenState
       ),
     );
   }
-
   void _confirmDeleteDepartment(int index) {
     final department = _filteredDepartments[index];
+    final departmentId = department['id'];
+    final departmentName = department['name'];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Department'),
         content: Text(
-          'Are you sure you want to delete "${department['name']}"? This action cannot be undone.',
+          'Are you sure you want to delete "$departmentName"? This action cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          FilledButton(
-            style: ButtonStyle(
+          FilledButton(            style: ButtonStyle(
               backgroundColor: WidgetStateProperty.all(Colors.red),
             ),
             onPressed: () async {
               Navigator.of(context).pop();
-              setState(() => _isLoading = true);
-
-              try {
-                await supabase
+              setState(() => _isLoading = true);              try {                await supabase
                     .from(AppConstants.tableDepartments)
                     .delete()
-                    .eq('id', department['id'].toString());
+                    .eq('id', departmentId.toString());
 
                 if (!mounted) return;
 
                 setState(() {
-                  _departments.removeWhere((d) => d['id'] == department['id']);
+                  _departments.removeWhere((d) => d['id'] == departmentId);
+                  _isLoading = false;
                 });
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Department deleted successfully'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                // Use ScaffoldMessenger safely after checking mounted
+                if (mounted) {
+                  final messenger = ScaffoldMessenger.of(context);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Department deleted successfully'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               } catch (e) {
                 if (!mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
+                final errorMessage = 'Failed to delete department: ${e.toString()}';
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.showSnackBar(
                   SnackBar(
-                    content:
-                        Text('Failed to delete department: ${e.toString()}'),
+                    content: Text(errorMessage),
                     backgroundColor: Colors.red,
                   ),
                 );
-              }
-
-              if (mounted) {
+                
                 setState(() => _isLoading = false);
               }
             },
