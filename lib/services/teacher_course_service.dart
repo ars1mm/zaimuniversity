@@ -1,7 +1,5 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 import '../main.dart';
-import '../constants/app_constants.dart';
 import 'base_service.dart';
 
 /// Service for teacher-specific course operations
@@ -12,7 +10,7 @@ class TeacherCourseService extends BaseService {
   Future<List<Map<String, dynamic>>> getTeacherCourses() async {
     try {
       _logger.info('Fetching courses for teacher');
-      
+
       // Get current user
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -25,27 +23,23 @@ class TeacherCourseService extends BaseService {
 
       // Query courses directly with a join to departments
       _logger.info('Querying courses with instructor_id = ${user.id}');
-      final response = await supabase
-          .from('courses')
-          .select('''
+      final response = await supabase.from('courses').select('''
             *,
             departments (
               id, 
               name
             )
-          ''')
-          .eq('instructor_id', user.id)
-          .order('title');
+          ''').eq('instructor_id', user.id).order('title');
 
       _logger.info('Retrieved ${response.length} courses for teacher');
-      
+
       // Log the retrieved courses for debugging
       if (response.isEmpty) {
         _logger.warning('No courses found for teacher');
       } else {
         _logger.info('First course title: ${response[0]['title']}');
       }
-      
+
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.severe('Error retrieving teacher courses', e);
@@ -62,7 +56,7 @@ class TeacherCourseService extends BaseService {
   }) async {
     try {
       _logger.info('Teacher updating course: $id');
-      
+
       // Get current user
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -89,15 +83,12 @@ class TeacherCourseService extends BaseService {
       }
 
       // Update course with limited fields that teachers can modify
-      await supabase
-          .from('courses')
-          .update({
-            'title': title,
-            'description': description ?? '',
-            'schedule': schedule ?? {},
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', id);
+      await supabase.from('courses').update({
+        'title': title,
+        'description': description ?? '',
+        'schedule': schedule ?? {},
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', id);
 
       _logger.info('Course updated successfully by teacher: $id');
       return {
@@ -117,7 +108,7 @@ class TeacherCourseService extends BaseService {
   Future<Map<String, dynamic>?> getCourseDetails(String courseId) async {
     try {
       _logger.info('Fetching course details for ID: $courseId');
-      
+
       // Get current user
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -125,18 +116,13 @@ class TeacherCourseService extends BaseService {
       }
 
       // Query the course with proper joins
-      final response = await supabase
-          .from('courses')
-          .select('''
+      final response = await supabase.from('courses').select('''
             *,
             departments (
               id, 
               name
             )
-          ''')
-          .eq('id', courseId)
-          .eq('instructor_id', user.id)
-          .maybeSingle();
+          ''').eq('id', courseId).eq('instructor_id', user.id).maybeSingle();
 
       if (response == null) {
         _logger.warning('Course not found or teacher does not have access');
@@ -150,4 +136,4 @@ class TeacherCourseService extends BaseService {
       throw Exception('Failed to retrieve course details: ${e.toString()}');
     }
   }
-} 
+}

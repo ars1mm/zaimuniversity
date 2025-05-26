@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:developer';
 
 class DebugHelper {
   /// Logs details about route navigation for debugging purposes
   static void logRouteNavigation(String routeName, List<String> allowedRoles) {
-    print('DEBUG NAVIGATION: Navigating to route: $routeName');
-    print('DEBUG NAVIGATION: Allowed roles for route: $allowedRoles');
+    log('DEBUG NAVIGATION: Navigating to route: $routeName');
+    log('DEBUG NAVIGATION: Allowed roles for route: $allowedRoles');
   }
 }

@@ -27,11 +27,11 @@ class HomeworkAssignmentScreen extends StatefulWidget {
   }
 
   @override
-  _HomeworkAssignmentScreenState createState() =>
-      _HomeworkAssignmentScreenState();
+  HomeworkAssignmentScreenState createState() =>
+      HomeworkAssignmentScreenState();
 }
 
-class _HomeworkAssignmentScreenState extends State<HomeworkAssignmentScreen> {
+class HomeworkAssignmentScreenState extends State<HomeworkAssignmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();

@@ -9,7 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserProfileManagementScreen extends StatefulWidget {
-  const UserProfileManagementScreen({Key? key}) : super(key: key);
+  const UserProfileManagementScreen({super.key});
 
   // Adding a factory constructor to ensure this class can be properly instantiated
   factory UserProfileManagementScreen.create() {

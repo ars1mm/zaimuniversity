@@ -2,13 +2,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../main.dart';
 import 'logger_service.dart';
-import 'supabase_service.dart';
 import 'base_service.dart';
 import '../constants/app_constants.dart';
 
 /// AuthService handles all authentication-related operations
 class AuthService extends BaseService {
-  final SupabaseService _supabaseService = SupabaseService();
   final _logger = LoggerService();
   static const String _tag = 'AuthService';
 

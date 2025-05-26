@@ -7,13 +7,12 @@ import '../services/teacher_grades_service.dart';
 class TeacherGradesScreen extends StatefulWidget {
   static const String routeName = '/teacher_grades';
 
-  const TeacherGradesScreen({Key? key}) : super(key: key);
-
+  const TeacherGradesScreen({super.key});
   @override
-  _TeacherGradesScreenState createState() => _TeacherGradesScreenState();
+  TeacherGradesScreenState createState() => TeacherGradesScreenState();
 }
 
-class _TeacherGradesScreenState extends State<TeacherGradesScreen> {
+class TeacherGradesScreenState extends State<TeacherGradesScreen> {
   final TeacherGradesService _gradesService = TeacherGradesService();
   final Logger _logger = Logger('TeacherGradesScreen');
 
@@ -701,9 +700,8 @@ class _TeacherGradesScreenState extends State<TeacherGradesScreen> {
                       final submission = homework['homework_submissions'][0];
 
                       return ExpansionTile(
-                        title: Text(homework['title']),
-                        subtitle: Text(
-                          'Due: ${homework['due_date']} · ' +
+                        title: Text(homework['title']),                        subtitle: Text(
+                          'Due: ${homework['due_date']} · '
                               'Submitted: ${submission['submitted_at'] ?? 'Not submitted'}',
                         ),
                         trailing: Text(

@@ -11,7 +11,6 @@ import 'screens/student_management_screen.dart';
 import 'screens/department_management_screen.dart';
 import 'screens/teacher_management_screen.dart';
 import 'screens/create_course_screen.dart';
-import 'screens/assign_supervisor_screen.dart';
 import 'screens/create_department_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/create_supervisor_screen.dart';
@@ -19,13 +18,12 @@ import 'screens/teacher_schedule_screen.dart';
 import 'screens/student_schedule_screen.dart';
 import 'screens/teacher_course_screen.dart';
 import 'screens/teacher_grades_screen.dart';
-// Re-import with full path to ensure it's properly recognized
 import 'package:zaimuniversity/screens/user_profile_management_screen.dart';
 import 'screens/profile_management_screen.dart';
 import './services/logger_service.dart';
 import './utils/route_guard.dart';
 import './constants/app_constants.dart';
-
+import 'screens/supervisor_assignment_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -260,15 +258,13 @@ class CampusInfoSystemApp extends StatelessWidget {
                   }
                   return snapshot.data ?? const LoginScreen();
                 },
-              ),
-            );
-
-          case '/assign_supervisor':
+              ),              );
+          case SupervisorAssignmentScreen.routeName:
             return MaterialPageRoute(
               builder: (context) => FutureBuilder<Widget>(
                 future: RouteGuard.protectRoute(
                   context: context,
-                  targetWidget: const AssignSupervisorScreen(),
+                  targetWidget: const SupervisorAssignmentScreen(),
                   allowedRoles: ['admin'],
                 ),
                 builder: (context, snapshot) {

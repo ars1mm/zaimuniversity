@@ -41,12 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (result['success'] == true && mounted) {
         // Get user role from login result or fetch it separately
-        String? userRole = result['role'] as String?;
-
-        // If no role in result, fetch it explicitly
-        if (userRole == null) {
-          userRole = await _authService.getUserRole();
-        }
+        String? userRole = result['role']
+            as String?; // If no role in result, fetch it explicitly
+        userRole ??= await _authService.getUserRole();
 
         print('DEBUG LOGIN: User role = $userRole');
 
@@ -113,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     spreadRadius: 5,
                   )
@@ -130,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(

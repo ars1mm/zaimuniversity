@@ -187,7 +187,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
           _users = [response];
           _isLoading = false;
         });
-              return;
+        return;
       }
 
       // For admins, load all users
@@ -384,7 +384,7 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
       } catch (storageError) {
         _logger.severe('Error in storage operations: $storageError');
         rethrow; // Rethrow to handle in outer catch
-      };
+      }
     } catch (e) {
       _logger.severe('Error updating profile picture', e);
 
@@ -549,7 +549,13 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withValues(alpha: 128, red: 0, green: 0, blue: 0),
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withValues(
+                                            alpha: 128,
+                                            red: 0,
+                                            green: 0,
+                                            blue: 0),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(

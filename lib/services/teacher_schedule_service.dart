@@ -30,17 +30,15 @@ class TeacherScheduleService {
       final teacherId = teacherProfileResponse[0]['id'];
 
       // Get courses taught by this teacher
-      final scheduleResponse = await supabase
-          .from('course_schedules')
-          .select('''
+      final scheduleResponse =
+          await supabase.from('course_schedules').select('''
             *,
             courses!course_id (
               id,
               title,
               description
             )
-          ''')
-          .eq('courses.instructor_id', teacherId);
+          ''').eq('courses.instructor_id', teacherId);
 
       if (scheduleResponse.isEmpty) {
         return _createEmptySchedule();
@@ -73,10 +71,6 @@ class TeacherScheduleService {
           .eq('id', user.id)
           .single();
 
-      if (teacherProfileResponse == null) {
-        throw Exception('Teacher profile not found');
-      }
-
       final teacherId = teacherProfileResponse['id'];
 
       // Get courses where this teacher is the instructor
@@ -89,7 +83,7 @@ class TeacherScheduleService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       _logger.severe('Error getting teacher courses', e);
-      throw e;
+      rethrow;
     }
   }
 
@@ -103,12 +97,12 @@ class TeacherScheduleService {
       'Saturday',
       'Sunday'
     ];
-    
+
     Map<String, List<Map<String, dynamic>>> emptySchedule = {};
     for (var day in weekdays) {
       emptySchedule[day] = [];
     }
-    
+
     return emptySchedule;
   }
 
@@ -149,8 +143,8 @@ class TeacherScheduleService {
 
     // Sort each day's schedule by start time
     scheduleByDay.forEach((day, daySchedules) {
-      daySchedules.sort((a, b) => 
-        (a['start_time'] ?? '').compareTo(b['start_time'] ?? ''));
+      daySchedules.sort(
+          (a, b) => (a['start_time'] ?? '').compareTo(b['start_time'] ?? ''));
     });
 
     return scheduleByDay;
@@ -169,15 +163,16 @@ class TeacherScheduleService {
       // Check if user has permission to create schedules
       final isAdmin = await _authService.isAdmin();
       final isSupervisor = await _authService.isSupervisor();
-      
+
       if (!isAdmin && !isSupervisor) {
-        _logger.warning('Unauthorized attempt to create schedule by regular teacher');
+        _logger.warning(
+            'Unauthorized attempt to create schedule by regular teacher');
         return {
           'success': false,
           'message': 'You do not have permission to create or modify schedules'
         };
       }
-      
+
       final user = supabase.auth.currentUser;
       if (user == null) {
         throw Exception('User not authenticated');
@@ -185,7 +180,7 @@ class TeacherScheduleService {
 
       // Validate teacher has rights to the course
       final teacherId = user.id;
-      
+
       final courseCheck = await supabase
           .from('courses')
           .select('id')
@@ -210,7 +205,8 @@ class TeacherScheduleService {
       if (conflicts.isNotEmpty) {
         return {
           'success': false,
-          'message': 'Schedule conflicts with existing course: ${conflicts[0]['course_title']}'
+          'message':
+              'Schedule conflicts with existing course: ${conflicts[0]['course_title']}'
         };
       }
 
@@ -224,22 +220,16 @@ class TeacherScheduleService {
         'building': building ?? '',
       });
 
-      return {
-        'success': true,
-        'message': 'Schedule created successfully'
-      };
+      return {'success': true, 'message': 'Schedule created successfully'};
     } catch (e) {
       _logger.severe('Error creating schedule entry', e);
-      return {
-        'success': false,
-        'message': 'Error: ${e.toString()}'
-      };
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
   }
 
   /// Checks for scheduling conflicts
-  Future<List<Map<String, dynamic>>> checkScheduleConflicts(
-      String courseId, String dayOfWeek, String startTime, String endTime) async {
+  Future<List<Map<String, dynamic>>> checkScheduleConflicts(String courseId,
+      String dayOfWeek, String startTime, String endTime) async {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -305,23 +295,4 @@ class TeacherScheduleService {
       rethrow;
     }
   }
-
-  Future<String?> _getTeacherId() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      throw Exception('User not authenticated');
-    }
-
-    final teacherProfileResponse = await supabase
-        .from(AppConstants.tableTeachers)
-        .select('id')
-        .eq('id', user.id);
-
-    if (teacherProfileResponse.isEmpty) {
-      return null;
-    }
-
-    return teacherProfileResponse[0]['id'];
-  }
 }
-

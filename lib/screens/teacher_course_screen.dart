@@ -15,7 +15,7 @@ class TeacherCourseScreen extends StatefulWidget {
 class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
   final TeacherCourseService _courseService = TeacherCourseService();
   final Logger _logger = Logger('TeacherCourseScreen');
-  
+
   List<Map<String, dynamic>> _courses = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -34,7 +34,7 @@ class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
 
     try {
       final courses = await _courseService.getTeacherCourses();
-      
+
       if (mounted) {
         setState(() {
           _courses = courses;
@@ -104,8 +104,9 @@ class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
       itemCount: _courses.length,
       itemBuilder: (context, index) {
         final course = _courses[index];
-        final departmentName = course['departments']?['name'] ?? 'Unknown Department';
-        
+        final departmentName =
+            course['departments']?['name'] ?? 'Unknown Department';
+
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           child: Padding(
@@ -198,7 +199,7 @@ class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),
@@ -215,7 +216,8 @@ class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
 
   void _showEditCourseDialog(Map<String, dynamic> course) {
     final titleController = TextEditingController(text: course['title']);
-    final descriptionController = TextEditingController(text: course['description'] ?? '');
+    final descriptionController =
+        TextEditingController(text: course['description'] ?? '');
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -264,17 +266,17 @@ class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 Navigator.of(context).pop();
-                
+
                 // Show loading indicator
                 setState(() => _isLoading = true);
-                
+
                 // Update course
                 final result = await _courseService.updateCourse(
                   id: course['id'],
                   title: titleController.text,
                   description: descriptionController.text,
                 );
-                
+
                 // Refresh courses list
                 if (result['success']) {
                   _loadCourses();
@@ -304,4 +306,4 @@ class _TeacherCourseScreenState extends State<TeacherCourseScreen> {
       ),
     );
   }
-} 
+}
