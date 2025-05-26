@@ -21,6 +21,7 @@ import 'screens/teacher_grades_screen.dart';
 import 'screens/user_profile_management_screen.dart';
 import 'screens/profile_management_screen.dart';
 import 'screens/enrollment_management_screen.dart';
+import 'screens/announcements_screen.dart';
 import './services/logger_service.dart';
 import './utils/route_guard.dart';
 import './constants/app_constants.dart';
@@ -145,6 +146,24 @@ class CampusInfoSystemApp extends StatelessWidget {
                   context: context,
                   targetWidget: const AddStudentScreen(),
                   allowedRoles: ['admin', 'supervisor'],
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return snapshot.data ?? const LoginScreen();
+                },
+              ),
+            );
+
+          case '/announcements':
+            return MaterialPageRoute(
+              builder: (context) => FutureBuilder<Widget>(
+                future: RouteGuard.protectRoute(
+                  context: context,
+                  targetWidget: const AnnouncementsScreen(),
+                  allowedRoles: ['admin', 'supervisor', 'teacher', 'student'],
                 ),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {

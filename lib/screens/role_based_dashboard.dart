@@ -58,7 +58,14 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
     switch (widget.userRole) {
       case 'admin':
         dashboardTitle = 'Admin Dashboard';
-        primaryColor = Colors.red;        menuItems = [
+        primaryColor = Colors.red;
+        menuItems = [
+          {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
           {
             'title': 'Course Enrollments',
             'icon': Icons.how_to_reg,
@@ -138,10 +145,17 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
             'route': '/profile',
           },
         ];
-        break;      case 'supervisor':
+        break;
+      case 'supervisor':
         dashboardTitle = 'Supervisor Dashboard';
         primaryColor = Colors.teal;
         menuItems = [
+          {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
           {
             'title': 'Course Enrollments',
             'icon': Icons.how_to_reg,
@@ -191,6 +205,12 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         primaryColor = Colors.blue;
         menuItems = [
           {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
+          {
             'title': 'My Courses',
             'icon': Icons.book,
             'color': Colors.indigo,
@@ -224,6 +244,12 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         primaryColor = Colors.blue;
         menuItems = [
           {
+            'title': 'Announcements',
+            'icon': Icons.announcement,
+            'color': Colors.red.shade700,
+            'route': '/announcements',
+          },
+          {
             'title': 'My Schedule',
             'icon': Icons.calendar_today,
             'color': Colors.blue.shade700,
@@ -256,8 +282,19 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
         title: Text(dashboardTitle),
         backgroundColor: primaryColor,
         actions: [
+          if (widget.userRole == 'admin' || widget.userRole == 'supervisor')
+            IconButton(
+              icon: const Icon(Icons.add_alert),
+              onPressed: () => Navigator.pushNamed(context, '/announcements'),
+              tooltip: 'Manage Announcements',
+            ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.person),
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
+            tooltip: 'Profile',
+          ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
             onPressed: _logout,
             tooltip: 'Logout',
           ),
@@ -310,6 +347,14 @@ class _RoleBasedDashboardState extends State<RoleBasedDashboard> {
                   ),
                 ],
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.announcement),
+              title: const Text('Announcements'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.pushNamed(context, '/announcements');
+              },
             ),
             ...menuItems.map((item) => ListTile(
                   leading: Icon(

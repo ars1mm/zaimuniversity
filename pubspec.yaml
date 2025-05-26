@@ -24,6 +24,7 @@ dependencies:
   uuid: ^4.2.2
   file_picker: ^10.1.9
   path: ^1.9.1
+  timeago: ^3.6.1
 
 dev_dependencies:
   flutter_test:
