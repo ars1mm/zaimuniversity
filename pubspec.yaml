@@ -18,7 +18,7 @@ dependencies:
   logging: ^1.2.0
   path_provider: ^2.1.1
   logger: ^2.5.0
-  vm_service: ^14.3.1
+  vm_service: 15.0.0
   flutter_svg: ^2.0.9
   image_picker: ^1.1.2
   uuid: ^4.2.2
